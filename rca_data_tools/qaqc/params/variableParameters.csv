@@ -1,0 +1,5 @@
+﻿variable,min,max,profileMin,profileMax,label,colorMap
+temperature,0,15,5,20,"degrees C",thermal
+salinity,31,35,30,35,"psu",haline
+density,1020,1045,1022,1030,"kg/m^3",dense
+oxygen,0,550,0,550,"umol/kg",matter

@@ -1,0 +1,7 @@
+parameter,variableNames
+temperature,"""seawater_temperature"""
+conductivity,"""ctdbp_no_seawater_conductivity"""
+pressure,"""ctdbp_no_seawater_pressure,seawater_pressure"""
+density,"""density"""
+oxygen,"""dissolved_oxygen,corrected_dissolved_oxygen"""
+salinity,"""practical_salinity"""
