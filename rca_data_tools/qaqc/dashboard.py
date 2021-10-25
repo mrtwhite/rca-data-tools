@@ -4,6 +4,7 @@ import gc
 import glob
 import io
 import json
+from loguru import logger
 import numpy as np
 import os
 import pandas as pd
@@ -101,28 +102,26 @@ def loadQARTOD(refDes, param, sensorType):
     ### Load climatology and gross range values
 
     githubBaseURL = 'https://raw.githubusercontent.com/oceanobservatories/qc-lookup/master/qartod/'
-    clim_URL = (
-        githubBaseURL
-        + sensorType
-        + '/climatology_tables/'
-        + refDes
-        + '-'
-        + param
-        + '.csv'
-    )
-    grossRange_URL = (
-        githubBaseURL
-        + sensorType
-        + '/'
-        + sensorType
-        + '_qartod_gross_range_test_values.csv'
-    )
+    urls = {
+        'clim': f"{githubBaseURL}{sensorType}/climatology_tables/{refDes}-{param}.csv",
+        'grossRange': f"{githubBaseURL}{sensorType}/{sensorType}_qartod_gross_range_test_values.csv",
+    }
+    dfdict = {}
+    for k, url in urls.items():
+        response = requests.get(url)
+        if response.status_code == 200:
+            download = response.content
+            df = pd.read_csv(io.StringIO(download.decode('utf-8')))
+            dfdict[k] = df
+        else:
+            logger.warning(f"No csv found for {k}: {refDes} {param} {sensorType}")
+            dfdict[k] = None
 
-    download = requests.get(grossRange_URL).content
-    df_grossRange = pd.read_csv(io.StringIO(download.decode('utf-8')))
+    if any(v is None for v in dfdict.values()):
+        return None
 
-    download = requests.get(clim_URL).content
-    df_clim = pd.read_csv(io.StringIO(download.decode('utf-8')))
+    df_grossRange = dfdict['grossRange']
+    df_clim = dfdict['clim']
 
     qcConfig = df_grossRange.qcConfig[
         (df_grossRange.subsite == site)

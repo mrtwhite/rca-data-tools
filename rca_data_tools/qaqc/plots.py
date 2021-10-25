@@ -134,9 +134,13 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument):
             overlayData_clim = {}
             overlayData_grossRange = {}
             sensorType = site.split('-')[3][0:5].lower()
-            (overlayData_grossRange, overlayData_clim) = dashFunc.loadQARTOD(
+            qartod_results = dashFunc.loadQARTOD(
                 site, Yparam, sensorType
             )
+            if qartod_results is None:
+                continue
+
+            (overlayData_grossRange, overlayData_clim) = qartod_results
             overlayData_near = {}
             # overlayData_near = loadNear(site)
 
@@ -311,8 +315,6 @@ def main():
 
     now = datetime.utcnow()
     logger.info("======= Creation started at: {} ======", now.isoformat())
-
-    logger.info(dataList)
     for site in dataList:
         sitePlotList = run_dashboard_creation(
             site, paramList, timeRef, plotInstrument
