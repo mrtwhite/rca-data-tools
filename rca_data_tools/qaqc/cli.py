@@ -88,12 +88,12 @@ def create_plot_for_depth(
     plotTitle_depth = plotTitle + ': ' + profileDepth + ' meters'
     imageName_base_depth = imageName_base + '_' + profileDepth + 'meters'
     if overlayData_clim:
-        overlayData_clim_extract = extractClim(
+        overlayData_clim_extract = dashFunc.extractClim(
             profileDepth, overlayData_clim, timeRef
         )
     else:
         overlayData_clim_extract = pd.DataFrame()
-    plotScatter(
+    dashFunc.plotScatter(
         paramData_depth,
         plotTitle_depth,
         yLabel,
@@ -107,7 +107,7 @@ def create_plot_for_depth(
     )
 
 
-def run_dashboard_creation(site, paramList, timeRef):
+def run_dashboard_creation(site, paramList, timeRef, plotInstrument):
     now = datetime.utcnow()
     plotList = []
     logger.info("site: {}", site)
@@ -281,9 +281,6 @@ def parse_args():
         default='profiler',
         help=f"Choices {str(list(selection_mapping.keys()))}",
     )
-    arg_parser.add_argument(
-        '--workers', type=int, default=3, help=f"The number of workers"
-    )
 
     return arg_parser.parse_args()
 
@@ -316,8 +313,11 @@ def main():
     now = datetime.utcnow()
     logger.info("======= Creation started at: {} ======", now.isoformat())
 
+    logger.info(dataList)
     for site in dataList:
-        sitePlotList = run_dashboard_creation(site, paramList, timeRef)
+        sitePlotList = run_dashboard_creation(
+            site, paramList, timeRef, plotInstrument
+        )
 
     # Organize pngs into folders
     organize_pngs()
