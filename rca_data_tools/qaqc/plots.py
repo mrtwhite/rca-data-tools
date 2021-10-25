@@ -13,9 +13,6 @@ HERE = Path(__file__).parent.absolute()
 PARAMS_DIR = HERE.joinpath('params')
 PLOT_DIR = Path('QAQCplots')
 
-# Always make sure it gets created
-PLOT_DIR.mkdir(exist_ok=True)
-
 selection_mapping = {'profiler': 'CTD-PROFILER', 'fixed': 'CTD-FIXED'}
 
 
@@ -293,6 +290,8 @@ def main():
     timeRef = parser.parse(timeString)
     logger.add("logfile_create_dashboard_{time}.log")
     logger.info('Dashboard creation initiated')
+    # Always make sure it gets created
+    PLOT_DIR.mkdir(exist_ok=True)
 
     plotInstrument = selection_mapping[args.instrument]
 
