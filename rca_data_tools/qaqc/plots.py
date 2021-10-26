@@ -137,8 +137,8 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument):
             qartod_results = dashFunc.loadQARTOD(
                 site, Yparam, sensorType
             )
-            if qartod_results is None:
-                continue
+            ###if qartod_results is None:
+            ###    continue
 
             (overlayData_grossRange, overlayData_clim) = qartod_results
             overlayData_near = {}
