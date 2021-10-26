@@ -489,7 +489,7 @@ def plotProfilesGrid(
 
                     else:
                         print('climatology is empty!')
-                        # profilePlot = plt.scatter(scatterX, scatterY, c=scatterZ, marker = '.', cmap = 'cmo.balance')
+                        profilePlot = plt.scatter(scatterX, scatterY, c=scatterZ, marker = '.', cmap = 'cmo.balance')
                         plt.annotate(
                             'No climatology data available',
                             xy=(0.3, 0.5),
