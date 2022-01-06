@@ -279,7 +279,12 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
     return plotList
 
 
-def organize_pngs():
+def organize_pngs(sync_to_s3=False, bucket_name='rca-qaqc', fs_kwargs={}):
+    if sync_to_s3 is True:
+        import fsspec
+
+        S3FS = fsspec.filesystem('s3', **fs_kwargs)
+
     for i in PLOT_DIR.iterdir():
         if i.is_file():
             if '.png' in str(i):
@@ -287,11 +292,17 @@ def organize_pngs():
                 subsite = fname.split('-')[0]
 
                 subsite_dir = PLOT_DIR / subsite
-                if not subsite_dir.exists():
-                    subsite_dir.mkdir()
+                subsite_dir.mkdir(exist_ok=True)
 
                 destination = subsite_dir / fname
                 i.replace(destination)
+
+                # Sync to s3
+                if sync_to_s3 is True:
+                    fs_path = '/'.join([bucket_name, subsite_dir.name, fname])
+                    if S3FS.exists(fs_path):
+                        S3FS.rm(fs_path)
+                    S3FS.put(str(destination.absolute()), fs_path)
             else:
                 print(f"{i} is not an image file ... skipping ...")
         else:
