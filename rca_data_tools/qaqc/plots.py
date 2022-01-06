@@ -6,8 +6,11 @@ import gc
 from loguru import logger
 import pandas as pd
 from pathlib import Path
+import xarray as xr
 
 from rca_data_tools.qaqc import dashboard as dashFunc
+from rca_data_tools.qaqc import decimateFunctions as decimate
+from rca_data_tools.qaqc import create_index
 
 HERE = Path(__file__).parent.absolute()
 PARAMS_DIR = HERE.joinpath('params')
@@ -101,16 +104,36 @@ def create_plot_for_depth(
         overlayData_clim_extract,
         overlayData_near,
         'medium',
+        span,
+        spanString
     )
 
 
-def run_dashboard_creation(site, paramList, timeRef, plotInstrument):
+def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decimationThreshold):
     now = datetime.utcnow()
     plotList = []
     logger.info("site: {}", site)
+    logger.info("span: {}", span)
+    span_dict = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
+    spanString = span_dict[span]
     # load data for site
     siteData = dashFunc.loadData(site, sites_dict)
     fileParams = sites_dict[site]['dataParameters'].strip('"').split(',')
+    # drop un-used variables from dataset
+    allVar = list(siteData.keys())
+    dropList = [item for item in allVar if item not in fileParams]
+    siteData = siteData.drop(dropList)
+    if int(span) == 365:
+        if len(siteData['time']) > decimationThreshold:
+            ### decimate data
+            siteData_df = decimate.downsample(siteData, decimationThreshold)
+            ### turn dataframe into dataset
+            del siteData
+            gc.collect()
+            siteData = xr.Dataset.from_dataframe(siteData_df,sparse=False)
+            siteData = siteData.swap_dims({'index': 'time'})
+            siteData = siteData.reset_coords()
+        
     for param in paramList:
         logger.info("paramter: {}", param)
         variableParams = variable_dict[param].strip('"').split(',')
@@ -134,13 +157,9 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument):
             overlayData_clim = {}
             overlayData_grossRange = {}
             sensorType = site.split('-')[3][0:5].lower()
-            qartod_results = dashFunc.loadQARTOD(
+            (overlayData_grossRange, overlayData_clim) = dashFunc.loadQARTOD(
                 site, Yparam, sensorType
             )
-            ###if qartod_results is None:
-            ###    continue
-
-            (overlayData_grossRange, overlayData_clim) = qartod_results
             overlayData_near = {}
             # overlayData_near = loadNear(site)
 
@@ -180,6 +199,8 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument):
                         imageName_base,
                         overlayData_clim,
                         overlayData_near,
+                        span,
+                        spanString
                     )
                     plotList.append(plots)
                     depths = sites_dict[site]['depths'].strip('"').split(',')
@@ -218,6 +239,8 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument):
                                 overlayData_clim_extract,
                                 overlayData_near,
                                 'medium',
+                                span,
+                                spanString
                             )
                             plotList.append(plots)
             else:
@@ -241,6 +264,8 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument):
                     overlayData_clim_extract,
                     overlayData_near,
                     'small',
+                    span,
+                    spanString
                 )
                 plotList.append(plots)
 
@@ -257,16 +282,18 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument):
 def organize_pngs():
     for i in PLOT_DIR.iterdir():
         if i.is_file():
-            fname = i.name
-            subsite = fname.split('-')[0]
+            if '.png' in str(i):
+                fname = i.name
+                subsite = fname.split('-')[0]
 
-            subsite_dir = PLOT_DIR / subsite
-            if not subsite_dir.exists():
-                subsite_dir.mkdir()
+                subsite_dir = PLOT_DIR / subsite
+                if not subsite_dir.exists():
+                    subsite_dir.mkdir()
 
-            destination = subsite_dir / fname
-            if not destination.exists():
+                destination = subsite_dir / fname
                 i.replace(destination)
+            else:
+                print(f"{i} is not an image file ... skipping ...")
         else:
             print(f"{i} is not a file ... skipping ...")
 
@@ -282,6 +309,11 @@ def parse_args():
         default='profiler',
         help=f"Choices {str(list(selection_mapping.keys()))}",
     )
+    arg_parser.add_argument(
+        '--workers', type=int, default=3, help=f"The number of workers"
+    )
+    arg_parser.add_argument('--span', type=str, default='7')
+    arg_parser.add_argument('--threshold', type=int, default='1000000')
 
     return arg_parser.parse_args()
 
@@ -317,11 +349,13 @@ def main():
     logger.info("======= Creation started at: {} ======", now.isoformat())
     for site in dataList:
         sitePlotList = run_dashboard_creation(
-            site, paramList, timeRef, plotInstrument
+            site, paramList, timeRef, plotInstrument, args.span, args.threshold
         )
+        # Organize pngs into folders
+        organize_pngs()
 
-    # Organize pngs into folders
-    organize_pngs()
+    create_index.main()
+
     end = datetime.utcnow()
     logger.info(
         "======= Creation finished at: {}. Time elapsed ({}) ======",
