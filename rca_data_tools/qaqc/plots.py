@@ -67,7 +67,8 @@ def map_concurrency(
 
 
 def run_dashboard_creation(
-    site, paramList, timeRef, plotInstrument, span, decimationThreshold
+    site, paramList, timeRef, plotInstrument,
+    span, decimationThreshold, logger=logger
 ):
     now = datetime.utcnow()
     plotList = []
