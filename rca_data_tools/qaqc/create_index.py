@@ -7,6 +7,7 @@ PLOTSDIR = HERE.joinpath('QAQCplots')
 HITLDIR = HERE.joinpath('HITL_notes')
 INDEX_FILE = 'index.json'
 
+
 def main():
     plots_json = PLOTSDIR.joinpath(INDEX_FILE)
     hitl_json = HITLDIR.joinpath(INDEX_FILE)

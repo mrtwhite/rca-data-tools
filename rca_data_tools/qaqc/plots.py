@@ -8,8 +8,8 @@ import pandas as pd
 from pathlib import Path
 import xarray as xr
 
-from rca_data_tools.qaqc import dashboard as dashFunc
-from rca_data_tools.qaqc import decimateFunctions as decimate
+from rca_data_tools.qaqc import dashboard
+from rca_data_tools.qaqc import decimate
 from rca_data_tools.qaqc import create_index
 
 HERE = Path(__file__).parent.absolute()
@@ -66,50 +66,9 @@ def map_concurrency(
     return results
 
 
-def create_plot_for_depth(
-    profileDepth,
-    paramData,
-    Yparam,
-    pressParam,
-    plotTitle,
-    imageName_base,
-    overlayData_clim,
-    yLabel,
-    profile_paramMin,
-    profile_paramMax,
-    overlayData_near,
-    timeRef,
+def run_dashboard_creation(
+    site, paramList, timeRef, plotInstrument, span, decimationThreshold
 ):
-    print(f"Depth: {profileDepth}")
-    paramData_depth = paramData[Yparam].where(
-        (int(profileDepth) < paramData[pressParam])
-        & (paramData[pressParam] < (int(profileDepth) + 0.5))
-    )
-    plotTitle_depth = plotTitle + ': ' + profileDepth + ' meters'
-    imageName_base_depth = imageName_base + '_' + profileDepth + 'meters'
-    if overlayData_clim:
-        overlayData_clim_extract = dashFunc.extractClim(
-            profileDepth, overlayData_clim, timeRef
-        )
-    else:
-        overlayData_clim_extract = pd.DataFrame()
-    dashFunc.plotScatter(
-        paramData_depth,
-        plotTitle_depth,
-        yLabel,
-        timeRef,
-        profile_paramMin,
-        profile_paramMax,
-        imageName_base_depth,
-        overlayData_clim_extract,
-        overlayData_near,
-        'medium',
-        span,
-        spanString
-    )
-
-
-def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decimationThreshold):
     now = datetime.utcnow()
     plotList = []
     logger.info("site: {}", site)
@@ -117,7 +76,7 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
     span_dict = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
     spanString = span_dict[span]
     # load data for site
-    siteData = dashFunc.loadData(site, sites_dict)
+    siteData = dashboard.loadData(site, sites_dict)
     fileParams = sites_dict[site]['dataParameters'].strip('"').split(',')
     # drop un-used variables from dataset
     allVar = list(siteData.keys())
@@ -125,17 +84,17 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
     siteData = siteData.drop(dropList)
     if int(span) == 365:
         if len(siteData['time']) > decimationThreshold:
-            ### decimate data
+            # decimate data
             siteData_df = decimate.downsample(siteData, decimationThreshold)
-            ### turn dataframe into dataset
+            # turn dataframe into dataset
             del siteData
             gc.collect()
-            siteData = xr.Dataset.from_dataframe(siteData_df,sparse=False)
+            siteData = xr.Dataset.from_dataframe(siteData_df, sparse=False)
             siteData = siteData.swap_dims({'index': 'time'})
             siteData = siteData.reset_coords()
-        
+
     for param in paramList:
-        logger.info("paramter: {}", param)
+        logger.info("parameter: {}", param)
         variableParams = variable_dict[param].strip('"').split(',')
         parameterList = [
             value for value in variableParams if value in fileParams
@@ -157,7 +116,7 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
             overlayData_clim = {}
             overlayData_grossRange = {}
             sensorType = site.split('-')[3][0:5].lower()
-            (overlayData_grossRange, overlayData_clim) = dashFunc.loadQARTOD(
+            (overlayData_grossRange, overlayData_clim) = dashboard.loadQARTOD(
                 site, Yparam, sensorType
             )
             overlayData_near = {}
@@ -185,7 +144,7 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
                     if 'None' not in depthMinMax:
                         yMin = int(depthMinMax[0])
                         yMax = int(depthMinMax[1])
-                    plots = dashFunc.plotProfilesGrid(
+                    plots = dashboard.plotProfilesGrid(
                         Yparam,
                         paramData,
                         plotTitle,
@@ -200,7 +159,7 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
                         overlayData_clim,
                         overlayData_near,
                         span,
-                        spanString
+                        spanString,
                     )
                     plotList.append(plots)
                     depths = sites_dict[site]['depths'].strip('"').split(',')
@@ -221,13 +180,13 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
                             )
                             if overlayData_clim:
                                 overlayData_clim_extract = (
-                                    dashFunc.extractClim(
+                                    dashboard.extractClim(
                                         timeRef, profileDepth, overlayData_clim
                                     )
                                 )
                             else:
                                 overlayData_clim_extract = pd.DataFrame()
-                            plots = dashFunc.plotScatter(
+                            plots = dashboard.plotScatter(
                                 Yparam,
                                 paramData_depth,
                                 plotTitle_depth,
@@ -240,19 +199,19 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
                                 overlayData_near,
                                 'medium',
                                 span,
-                                spanString
+                                spanString,
                             )
                             plotList.append(plots)
             else:
                 paramData = siteData[Yparam]
                 if overlayData_clim:
-                    overlayData_clim_extract = dashFunc.extractClim(
+                    overlayData_clim_extract = dashboard.extractClim(
                         timeRef, '0', overlayData_clim
                     )
                 else:
                     overlayData_clim_extract = pd.DataFrame()
                 # PLOT
-                plots = dashFunc.plotScatter(
+                plots = dashboard.plotScatter(
                     Yparam,
                     paramData,
                     plotTitle,
@@ -265,7 +224,7 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
                     overlayData_near,
                     'small',
                     span,
-                    spanString
+                    spanString,
                 )
                 plotList.append(plots)
 
@@ -320,11 +279,8 @@ def parse_args():
         default='profiler',
         help=f"Choices {str(list(selection_mapping.keys()))}",
     )
-    arg_parser.add_argument(
-        '--workers', type=int, default=3, help=f"The number of workers"
-    )
     arg_parser.add_argument('--span', type=str, default='7')
-    arg_parser.add_argument('--threshold', type=int, default='1000000')
+    arg_parser.add_argument('--threshold', type=int, default=1000000)
 
     return arg_parser.parse_args()
 
@@ -359,7 +315,7 @@ def main():
     now = datetime.utcnow()
     logger.info("======= Creation started at: {} ======", now.isoformat())
     for site in dataList:
-        sitePlotList = run_dashboard_creation(
+        run_dashboard_creation(
             site, paramList, timeRef, plotInstrument, args.span, args.threshold
         )
         # Organize pngs into folders
