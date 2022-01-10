@@ -16,6 +16,7 @@ PARAMS_DIR = HERE.joinpath('params')
 PLOT_DIR = Path('QAQCplots')
 
 selection_mapping = {'profiler': 'CTD-PROFILER', 'fixed': 'CTD-FIXED'}
+span_dict = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
 
 
 # create dictionary of sites key for filePrefix, nearestNeighbors
@@ -66,11 +67,17 @@ def map_concurrency(
 
 
 def run_dashboard_creation(
-    site, paramList, timeRef, plotInstrument,
-    span, decimationThreshold, logger=None
+    site,
+    paramList,
+    timeRef,
+    plotInstrument,
+    span,
+    decimationThreshold,
+    logger=None,
 ):
     if logger == 'prefect':
         import prefect
+
         logger = prefect.context.get("logger")
     else:
         from loguru import logger
@@ -85,7 +92,6 @@ def run_dashboard_creation(
     plotList = []
     logger.info(f"site: {site}")
     logger.info(f"span: {span}")
-    span_dict = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
     spanString = span_dict[span]
     # load data for site
     siteData = dashboard.loadData(site, sites_dict)
@@ -97,7 +103,9 @@ def run_dashboard_creation(
     if int(span) == 365:
         if len(siteData['time']) > decimationThreshold:
             # decimate data
-            siteData_df = decimate.downsample(siteData, decimationThreshold, logger=logger)
+            siteData_df = decimate.downsample(
+                siteData, decimationThreshold, logger=logger
+            )
             # turn dataframe into dataset
             del siteData
             gc.collect()
@@ -291,7 +299,12 @@ def parse_args():
         default='profiler',
         help=f"Choices {str(list(selection_mapping.keys()))}",
     )
-    arg_parser.add_argument('--span', type=str, default='7')
+    arg_parser.add_argument(
+        '--span',
+        type=str,
+        default='7',
+        help=f"Choices {str(list(span_dict.keys()))}",
+    )
     arg_parser.add_argument('--threshold', type=int, default=1000000)
 
     return arg_parser.parse_args()
@@ -299,6 +312,7 @@ def parse_args():
 
 def main():
     from loguru import logger
+
     args = parse_args()
 
     # User options ...
@@ -329,8 +343,13 @@ def main():
     logger.info(f"======= Creation started at: {now.isoformat()} ======")
     for site in dataList:
         run_dashboard_creation(
-            site, paramList, timeRef, plotInstrument, 
-            args.span, args.threshold, logger=logger
+            site,
+            paramList,
+            timeRef,
+            plotInstrument,
+            args.span,
+            args.threshold,
+            logger=logger,
         )
         # Organize pngs into folders
         organize_pngs()
