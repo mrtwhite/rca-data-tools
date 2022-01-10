@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 import gc
 import io
 import json
-from loguru import logger
 import numpy as np
 import pandas as pd
 import requests
@@ -91,7 +90,9 @@ def extractClim(timeRef, profileDepth, overlayData_clim):
     return climInterpolated_hour
 
 
-def loadQARTOD(refDes, param, sensorType):
+def loadQARTOD(refDes, param, sensorType, logger=None):
+    if logger is None:
+        from loguru import logger
 
     (site, node, sensor1, sensor2) = refDes.split('-')
     sensor = sensor1 + '-' + sensor2

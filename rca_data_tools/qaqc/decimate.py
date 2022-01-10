@@ -5,7 +5,6 @@ import math
 import numba
 import numpy as np
 import pandas as pd
-from loguru import logger
 
 from functools import reduce
 
@@ -134,7 +133,10 @@ def perform_decimation(ds, threshold):
     return pd.DataFrame(decdata, columns=cols)
 
 
-def downsample(raw_ds, threshold, logger=logger):
+def downsample(raw_ds, threshold, logger=None):
+    if logger is None:
+        from loguru import logger
+
     logger.debug("Get list of data arrays")
     da_list = (raw_ds[var] for var in raw_ds)
 

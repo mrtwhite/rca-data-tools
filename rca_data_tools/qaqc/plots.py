@@ -94,7 +94,7 @@ def run_dashboard_creation(
     if int(span) == 365:
         if len(siteData['time']) > decimationThreshold:
             # decimate data
-            siteData_df = decimate.downsample(siteData, decimationThreshold)
+            siteData_df = decimate.downsample(siteData, decimationThreshold, logger=logger)
             # turn dataframe into dataset
             del siteData
             gc.collect()
@@ -126,7 +126,7 @@ def run_dashboard_creation(
             overlayData_grossRange = {}
             sensorType = site.split('-')[3][0:5].lower()
             (overlayData_grossRange, overlayData_clim) = dashboard.loadQARTOD(
-                site, Yparam, sensorType
+                site, Yparam, sensorType, logger=logger
             )
             overlayData_near = {}
             # overlayData_near = loadNear(site)
