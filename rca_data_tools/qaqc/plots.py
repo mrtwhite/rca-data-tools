@@ -69,7 +69,10 @@ def run_dashboard_creation(
     site, paramList, timeRef, plotInstrument,
     span, decimationThreshold, logger=None
 ):
-    if logger is None:
+    if logger == 'prefect':
+        import prefect
+        logger = prefect.context.get("logger")
+    else:
         from loguru import logger
 
     now = datetime.utcnow()
