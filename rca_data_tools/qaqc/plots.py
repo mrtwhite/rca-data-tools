@@ -75,6 +75,9 @@ def run_dashboard_creation(
     else:
         from loguru import logger
 
+    if isinstance(timeRef, str):
+        timeRef = parser.parse(timeRef)
+
     now = datetime.utcnow()
     plotList = []
     logger.info(f"site: {site}")
