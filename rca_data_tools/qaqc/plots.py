@@ -3,7 +3,6 @@ import concurrent.futures
 from datetime import datetime
 from dateutil import parser
 import gc
-from loguru import logger
 import pandas as pd
 from pathlib import Path
 import xarray as xr
@@ -68,8 +67,11 @@ def map_concurrency(
 
 def run_dashboard_creation(
     site, paramList, timeRef, plotInstrument,
-    span, decimationThreshold, logger=logger
+    span, decimationThreshold, logger=None
 ):
+    if logger is None:
+        from loguru import logger
+
     now = datetime.utcnow()
     plotList = []
     logger.info(f"site: {site}")
@@ -287,6 +289,7 @@ def parse_args():
 
 
 def main():
+    from loguru import logger
     args = parse_args()
 
     # User options ...
@@ -317,7 +320,8 @@ def main():
     logger.info(f"======= Creation started at: {now.isoformat()} ======")
     for site in dataList:
         run_dashboard_creation(
-            site, paramList, timeRef, plotInstrument, args.span, args.threshold
+            site, paramList, timeRef, plotInstrument, 
+            args.span, args.threshold, logger=logger
         )
         # Organize pngs into folders
         organize_pngs()
