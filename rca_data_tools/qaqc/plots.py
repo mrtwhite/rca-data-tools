@@ -78,6 +78,9 @@ def run_dashboard_creation(
     if isinstance(timeRef, str):
         timeRef = parser.parse(timeRef)
 
+    # Ensure that plot dir is created!
+    PLOT_DIR.mkdir(exist_ok=True)
+
     now = datetime.utcnow()
     plotList = []
     logger.info(f"site: {site}")
