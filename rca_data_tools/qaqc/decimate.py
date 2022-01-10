@@ -140,7 +140,7 @@ def downsample(raw_ds, threshold, logger=logger):
 
     df_list = []
     for da in da_list:
-        logger.debug("Executing decimation for {da.name}")
+        logger.debug(f"Executing decimation for {da.name}")
         decdf = perform_decimation(da, threshold)
         df_list.append(decdf)
 

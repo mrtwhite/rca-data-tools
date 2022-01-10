@@ -72,8 +72,8 @@ def run_dashboard_creation(
 ):
     now = datetime.utcnow()
     plotList = []
-    logger.info("site: {}", site)
-    logger.info("span: {}", span)
+    logger.info(f"site: {site}")
+    logger.info(f"span: {span}")
     span_dict = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
     spanString = span_dict[span]
     # load data for site
@@ -95,7 +95,7 @@ def run_dashboard_creation(
             siteData = siteData.reset_coords()
 
     for param in paramList:
-        logger.info("parameter: {}", param)
+        logger.info(f"parameter: {param}")
         variableParams = variable_dict[param].strip('"').split(',')
         parameterList = [
             value for value in variableParams if value in fileParams
@@ -235,7 +235,7 @@ def run_dashboard_creation(
     gc.collect()
     end = datetime.utcnow()
     elapsed = end - now
-    logger.info("{} finished plotting: Time elapsed ({})", site, str(elapsed))
+    logger.info(f"{site} finished plotting: Time elapsed ({elapsed})")
     return plotList
 
 
@@ -314,7 +314,7 @@ def main():
             dataList.append(key)
 
     now = datetime.utcnow()
-    logger.info("======= Creation started at: {} ======", now.isoformat())
+    logger.info(f"======= Creation started at: {now.isoformat()} ======")
     for site in dataList:
         run_dashboard_creation(
             site, paramList, timeRef, plotInstrument, args.span, args.threshold
@@ -326,9 +326,7 @@ def main():
 
     end = datetime.utcnow()
     logger.info(
-        "======= Creation finished at: {}. Time elapsed ({}) ======",
-        end.isoformat(),
-        (end - now),
+        f"======= Creation finished at: {end.isoformat()}. Time elapsed ({(end - now)}) ======",
     )
 
 
