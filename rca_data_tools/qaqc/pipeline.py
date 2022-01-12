@@ -1,9 +1,11 @@
 import datetime
 import os
+import warnings
 from pathlib import Path
 from prefect import task, Flow, Parameter
 from prefect.storage import Docker
 from prefect.run_configs import ECSRun
+import prefect.engine.signals as prefect_signals
 
 from rca_data_tools.qaqc.plots import (
     instrument_dict,
@@ -24,7 +26,7 @@ def register_flow(flow: Flow, project_name: str = 'rca-qaqc'):
             if isinstance(res, str):
                 ready = True
         except Exception as e:
-            print(e)
+            warnings.warn(e)
             ready = False
     return flow.name, project_name
 
@@ -33,16 +35,31 @@ def register_flow(flow: Flow, project_name: str = 'rca-qaqc'):
 def dashboard_creation_task(
     site, paramList, timeString, plotInstrument, span, threshold, logger
 ):
-    run_dashboard_creation(
-        site, paramList, timeString, plotInstrument, span, threshold, logger
-    )
+    try:
+        plotList = run_dashboard_creation(
+            site,
+            paramList,
+            timeString,
+            plotInstrument,
+            span,
+            threshold,
+            logger,
+        )
+        return plotList
+    except Exception as e:
+        prefect_signals.FAIL(message=f"PNG Creation Failed for {site}: {e}")
 
 
 @task
-def organize_pngs_task(fs_kwargs={}, sync_to_s3=False, s3_bucket='rca-qaqc'):
-    organize_pngs(
-        sync_to_s3=sync_to_s3, fs_kwargs=fs_kwargs, bucket_name=s3_bucket
-    )
+def organize_pngs_task(
+    plotList=[], fs_kwargs={}, sync_to_s3=False, s3_bucket='rca-qaqc'
+):
+    if len(plotList) > 0:
+        organize_pngs(
+            sync_to_s3=sync_to_s3, fs_kwargs=fs_kwargs, bucket_name=s3_bucket
+        )
+    else:
+        prefect_signals.SKIP(message="No plots found to be organized.")
 
 
 class QAQCPipeline:
@@ -161,7 +178,7 @@ class QAQCPipeline:
                 's3_bucket', default=self.s3_bucket, required=False
             )
 
-            dashboard_creation_task(
+            plotList = dashboard_creation_task(
                 site=site_param,
                 paramList=paramList_param,
                 timeString=timeString_param,
@@ -171,6 +188,7 @@ class QAQCPipeline:
                 logger=logger_param,
             )
             organize_pngs_task(
+                plotList=plotList,
                 sync_to_s3=sync_to_s3_param,
                 fs_kwargs=fs_kwargs_param,
                 s3_bucket=s3_bucket_param,
