@@ -47,7 +47,7 @@ def dashboard_creation_task(
         )
         return plotList
     except Exception as e:
-        prefect_signals.FAIL(message=f"PNG Creation Failed for {site}: {e}")
+        raise prefect_signals.FAIL(message=f"PNG Creation Failed for {site}: {e}")
 
 
 @task
@@ -59,7 +59,7 @@ def organize_pngs_task(
             sync_to_s3=sync_to_s3, fs_kwargs=fs_kwargs, bucket_name=s3_bucket
         )
     else:
-        prefect_signals.SKIP(message="No plots found to be organized.")
+        raise prefect_signals.SKIP(message="No plots found to be organized.")
 
 
 class QAQCPipeline:
