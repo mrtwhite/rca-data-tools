@@ -14,6 +14,21 @@ from rca_data_tools.qaqc.plots import (
 HERE = Path(__file__).parent.absolute()
 
 
+def register_flow(flow: Flow, project_name: str = 'rca-qaqc'):
+    ready = False
+    while not ready:
+        # Keep trying to avoid docker registry interruptions
+        try:
+            flow.validate()
+            res = flow.register(project_name=project_name)
+            if isinstance(res, str):
+                ready = True
+        except Exception as e:
+            print(e)
+            ready = False
+    return flow.name, project_name
+
+
 @task
 def dashboard_creation_task(
     site, paramList, timeString, plotInstrument, span, threshold, logger
@@ -112,6 +127,7 @@ class QAQCPipeline:
         return
 
     def __setup_flow(self):
+        # TODO: Add schedule so it can cron away!
         with Flow(
             self.name, storage=self.storage, run_config=self.run_config
         ) as flow:
