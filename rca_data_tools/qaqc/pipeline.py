@@ -1,6 +1,7 @@
 import datetime
 import os
 import warnings
+import argparse
 from pathlib import Path
 from prefect import task, Flow, Parameter
 from prefect.storage import Docker
@@ -242,7 +243,7 @@ class QAQCPipeline:
                 project_name=PROJECT_NAME,
                 parameters=parameters,
                 run_config=self.run_config,
-                run_name=self.name
+                run_name=self.name,
             )
         else:
             self.flow.run(parameters=parameters)
@@ -330,3 +331,45 @@ class QAQCPipeline:
             else run_task_kwargs,
         }
         return dict(**run_options, **kwargs)
+
+
+def parse_args():
+    arg_parser = argparse.ArgumentParser(description='QAQC Pipeline Register')
+
+    arg_parser.add_argument('--register', action="store_true")
+    arg_parser.add_argument('--run', action="store_true")
+    arg_parser.add_argument('--cloud', action="store_true")
+    arg_parser.add_argument('--s3-sync', action="store_true")
+    arg_parser.add_argument('--site', type=str, default=None)
+    arg_parser.add_argument('--time', type=str, default='2020-06-30')
+    arg_parser.add_argument(
+        '--span',
+        type=str,
+        default='7',
+        help=f"Choices {str(list(span_dict.keys()))}",
+    )
+    arg_parser.add_argument('--threshold', type=int, default=1000000)
+
+    return arg_parser.parse_args()
+
+
+def main():
+    from loguru import logger
+
+    args = parse_args()
+
+    pipeline = QAQCPipeline(
+        site=args.site,
+        cloud_run=args.cloud,
+        s3_sync=args.s3_sync,
+        time=args.time,
+        span=args.span,
+        threshold=args.threshold,
+    )
+
+    if args.register is True:
+        logger.info(f"Registering pipeline {pipeline.flow.name}.")
+        register_flow(pipeline.flow)
+
+    if args.run is True:
+        pipeline.run()
