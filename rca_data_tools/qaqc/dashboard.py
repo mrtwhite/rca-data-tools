@@ -269,8 +269,11 @@ def plotProfilesGrid(
     xMax = endDate + timedelta(days=int(span) * 0.002)
     baseDS = paramData.sel(time=slice(startDate, endDate))
     scatterX = baseDS.time.values
-    scatterY = baseDS.seawater_pressure.values
-    scatterZ = baseDS[Yparam].values
+    scatterY = np.array([])
+    scatterZ = np.array([])
+    if len(scatterX) > 0:
+        scatterY = baseDS.seawater_pressure.values
+        scatterZ = baseDS[Yparam].values
     fig, ax = setPlot()
 
     if scatterX.size != 0:
@@ -613,7 +616,9 @@ def plotScatter(
     xMax = endDate + timedelta(days=int(span) * 0.002)
     baseDS = paramData.sel(time=slice(startDate, endDate))
     scatterX = baseDS.time.values
-    scatterY = baseDS.values
+    scatterY = np.array([])
+    if len(scatterX) > 0:
+        scatterY = baseDS.values
     fig, ax = setPlot()
     emptySlice = 'no'
     if 'large' in plotMarkerSize:
