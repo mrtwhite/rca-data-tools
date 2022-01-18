@@ -662,7 +662,9 @@ def plotScatter(
                     timedelta(days=365 * z)
                 )
                 timeX = timeDS.plotTime.values
-                timeY = timeDS.values
+                timeY = np.array([])
+                if len(timeX) > 0:
+                    timeY = timeDS.values
                 c = lineColors[z]
                 if 'large' in plotMarkerSize:
                     plt.plot(
