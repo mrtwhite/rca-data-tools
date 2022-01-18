@@ -154,6 +154,10 @@ class QAQCPipeline:
     def __setup(self):
         self.created_dt = datetime.datetime.utcnow()
         if self.site is not None:
+            if self.site not in sites_dict:
+                raise ValueError(
+                    f"{self.site} is not available. Available sites {','.join(list(sites_dict.keys()))}"  # noqa
+                )
             site_ds = sites_dict[self.site]
             self.plotInstrument = site_ds['instrument']
             if self.span not in span_dict:
@@ -337,6 +341,7 @@ def parse_args():
     arg_parser = argparse.ArgumentParser(description='QAQC Pipeline Register')
 
     arg_parser.add_argument('--register', action="store_true")
+    arg_parser.add_argument('--all', action="store_true")
     arg_parser.add_argument('--run', action="store_true")
     arg_parser.add_argument('--cloud', action="store_true")
     arg_parser.add_argument('--s3-sync', action="store_true")
@@ -357,19 +362,33 @@ def main():
     from loguru import logger
 
     args = parse_args()
+    if args.all is True:
+        now = datetime.datetime.utcnow()
+        for key in sites_dict.keys():
+            pipeline = QAQCPipeline(
+                site=key,
+                cloud_run=args.cloud,
+                s3_sync=args.s3_sync,
+                time=now.strftime("%Y-%m-%d"),
+                span=args.span,
+                threshold=args.threshold,
+            )
+            logger.info(f"{pipeline.name} created.")
+            if args.run is True:
+                pipeline.run()
+    else:
+        pipeline = QAQCPipeline(
+            site=args.site,
+            cloud_run=args.cloud,
+            s3_sync=args.s3_sync,
+            time=args.time,
+            span=args.span,
+            threshold=args.threshold,
+        )
 
-    pipeline = QAQCPipeline(
-        site=args.site,
-        cloud_run=args.cloud,
-        s3_sync=args.s3_sync,
-        time=args.time,
-        span=args.span,
-        threshold=args.threshold,
-    )
+        if args.register is True:
+            logger.info(f"Registering pipeline {pipeline.flow.name}.")
+            register_flow(pipeline.flow)
 
-    if args.register is True:
-        logger.info(f"Registering pipeline {pipeline.flow.name}.")
-        register_flow(pipeline.flow)
-
-    if args.run is True:
-        pipeline.run()
+        if args.run is True:
+            pipeline.run()
