@@ -2,6 +2,7 @@ import datetime
 import os
 import warnings
 import argparse
+import time
 from pathlib import Path
 from prefect import task, Flow, Parameter
 from prefect.storage import Docker
@@ -376,6 +377,8 @@ def main():
             logger.info(f"{pipeline.name} created.")
             if args.run is True:
                 pipeline.run()
+            # Add 10s delay for each run
+            time.sleep(10)
     else:
         pipeline = QAQCPipeline(
             site=args.site,
