@@ -4,23 +4,42 @@ from datetime import datetime
 import argparse
 import gspread
 import pandas as pd
+import fsspec
 from pathlib import Path
 from loguru import logger
+
+from .pipeline import S3_BUCKET
 
 HITL_NOTES_DIR = Path('HITL_notes')
 
 
+def sync_s3(s3_bucket=f"s3://{S3_BUCKET}", storage_options={}):
+    fmap = fsspec.get_mapper(
+        f"{s3_bucket}/{HITL_NOTES_DIR.name}", **storage_options
+    )
+    if fmap.fs.isdir(fmap.root):
+        fmap.fs.rm(fmap.root, recursive=True)
+    fmap.fs.put(str(HITL_NOTES_DIR.absolute()), fmap.root, recursive=True)
+
+
 def fetch_creds(service_json_path: str = ''):
     if service_json_path:
-        JSON_PATH = Path(service_json_path)
+        if service_json_path.startswith("s3://"):
+            JSON_PATH = fsspec.get_mapper(service_json_path)
+        else:
+            JSON_PATH = Path(service_json_path)
     else:
         raise ValueError("Please Provide A Service Account Credential")
     GSPREAD_DIR = Path(os.path.expanduser("~"), ".config", "gspread")
     GSPREAD_DIR.mkdir(exist_ok=True)
     GSPREAD_JSON = GSPREAD_DIR.joinpath("service_account.json")
 
-    with open(JSON_PATH, 'rb') as f:
-        GSPREAD_JSON.write_bytes(f.read())
+    if isinstance(JSON_PATH, fsspec.FSMap):
+        with JSON_PATH.fs.open(JSON_PATH.root, 'rb') as f:
+            GSPREAD_JSON.write_bytes(f.read())
+    else:
+        with open(JSON_PATH, 'rb') as f:
+            GSPREAD_JSON.write_bytes(f.read())
 
 
 def read_logs() -> pd.DataFrame:
@@ -141,6 +160,7 @@ def parse_args():
         description='QAQC HITL Notes Generator'
     )
     arg_parser.add_argument('--service-json-path', type=str, required=True)
+    arg_parser.add_argument('--s3-sync', action="store_true")
 
     return arg_parser.parse_args()
 
@@ -158,6 +178,8 @@ def main():
     HITL_NOTES_DIR.mkdir(exist_ok=True)
     logger.info('Writing csv files for HITL notes ...')
     generate_tables(df_HITL)
+    if args.s3_sync is True:
+        sync_s3()
     end = datetime.utcnow()
     logger.info(
         "======= Generation finished at: {}. Time elapsed ({}) ======",
