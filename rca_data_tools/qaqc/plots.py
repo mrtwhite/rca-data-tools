@@ -9,7 +9,6 @@ import xarray as xr
 
 from rca_data_tools.qaqc import dashboard
 from rca_data_tools.qaqc import decimate
-from rca_data_tools.qaqc import index
 
 HERE = Path(__file__).parent.absolute()
 PARAMS_DIR = HERE.joinpath('params')
@@ -353,8 +352,6 @@ def main():
         )
         # Organize pngs into folders
         organize_pngs()
-
-    index.create_local_index()
 
     end = datetime.utcnow()
     logger.info(
