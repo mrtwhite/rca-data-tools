@@ -20,7 +20,7 @@ from rca_data_tools.qaqc.plots import (
 )
 
 HERE = Path(__file__).parent.absolute()
-S3_BUCKET = 'rca-qaqc'
+S3_BUCKET = 'qaqc.ooica.net'
 PROJECT_NAME = 'rca-qaqc'
 
 
@@ -67,7 +67,7 @@ def dashboard_creation_task(site, timeString, span, threshold, logger):
 
 @task
 def organize_pngs_task(
-    plotList=[], fs_kwargs={}, sync_to_s3=False, s3_bucket='rca-qaqc'
+    plotList=[], fs_kwargs={}, sync_to_s3=False, s3_bucket=S3_BUCKET
 ):
     if len(plotList) > 0:
         organize_pngs(

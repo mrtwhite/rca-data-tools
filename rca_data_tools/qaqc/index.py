@@ -16,21 +16,27 @@ def create_cloud_index(
     if logger is None:
         from loguru import logger
 
-    fsmap = fsspec.get_mapper(bucket_url, **storage_options)
-    index_dict = {'plots': [], 'hitl_notes': []}
+    plotsmapper = fsspec.get_mapper(
+        '/'.join([bucket_url, PLOTSDIR.name]), **storage_options
+    )
+    hitlmapper = fsspec.get_mapper(
+        '/'.join([bucket_url, HITLDIR.name]), **storage_options
+    )
 
-    for item in fsmap.keys():
-        if item.endswith('.png'):
-            index_dict['plots'].append(item)
-        elif item.startswith('HITL_notes') and item.endswith('.csv'):
-            index_dict['hitl_notes'].append(item)
-        elif item == INDEX_FILE:
-            logger.info(f"{INDEX_FILE} file... skipping.")
-        else:
-            logger.warning(f"Unknown file found: {item}.")
+    plots_index = [
+        item for item in plotsmapper.keys() if item.endswith('.png')
+    ]
+    hitl_index = [item for item in hitlmapper.keys() if item.endswith('.csv')]
 
-    with fsmap.fs.open(f"{fsmap.root}/{INDEX_FILE}", mode='w') as f:
-        json.dump(index_dict, f)
+    with plotsmapper.fs.open(
+        f"{plotsmapper.root}/{INDEX_FILE}", mode='w'
+    ) as f:
+        json.dump(plots_index, f)
+
+    with hitlmapper.fs.open(
+        f"{hitlmapper.root}/{INDEX_FILE}", mode='w'
+    ) as f:
+        json.dump(hitl_index, f)
 
 
 def create_local_index():

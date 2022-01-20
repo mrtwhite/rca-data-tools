@@ -12,7 +12,7 @@ from rca_data_tools.qaqc import decimate
 
 HERE = Path(__file__).parent.absolute()
 PARAMS_DIR = HERE.joinpath('params')
-PLOT_DIR = Path('QAQCplots')
+PLOT_DIR = Path('QAQC_plots')
 
 selection_mapping = {'profiler': 'CTD-PROFILER', 'fixed': 'CTD-FIXED'}
 span_dict = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
@@ -257,7 +257,9 @@ def run_dashboard_creation(
     return plotList
 
 
-def organize_pngs(sync_to_s3=False, bucket_name='rca-qaqc', fs_kwargs={}):
+def organize_pngs(
+    sync_to_s3=False, bucket_name='qaqc.ooica.net', fs_kwargs={}
+):
     if sync_to_s3 is True:
         import fsspec
 
@@ -277,7 +279,9 @@ def organize_pngs(sync_to_s3=False, bucket_name='rca-qaqc', fs_kwargs={}):
 
                 # Sync to s3
                 if sync_to_s3 is True:
-                    fs_path = '/'.join([bucket_name, subsite_dir.name, fname])
+                    fs_path = '/'.join(
+                        [bucket_name, PLOT_DIR.name, subsite_dir.name, fname]
+                    )
                     if S3FS.exists(fs_path):
                         S3FS.rm(fs_path)
                     S3FS.put(str(destination.absolute()), fs_path)
