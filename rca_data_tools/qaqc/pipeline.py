@@ -302,7 +302,7 @@ class QAQCPipeline:
         defaults = {
             'cpu': '4 vcpu',
             'memory': '30 GB',
-            'labels': ['ecs-agent', 'ooi', 'prod'],
+            'labels': ['rca', 'prod'],
             'run_task_kwargs': {
                 'cluster': 'prefectECSCluster',
                 'launchType': 'FARGATE',
@@ -312,6 +312,8 @@ class QAQCPipeline:
                 'AWS_KEY': os.environ.get('AWS_KEY', ''),
                 'AWS_SECRET': os.environ.get('AWS_SECRET', ''),
                 'PREFECT__CLOUD__HEARTBEAT_MODE': 'thread',
+                'AWS_RETRY_MODE': os.environ.get('AWS_RETRY_MODE', 'adaptive'),
+                'AWS_MAX_ATTEMPTS': os.environ.get('AWS_MAX_ATTEMPTS', '100'),
             },
         }
         run_options = {
