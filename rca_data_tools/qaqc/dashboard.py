@@ -25,7 +25,6 @@ from matplotlib.colors import ListedColormap
 import cmocean
 from scipy.interpolate import griddata
 
-
 def pressureBracket(pressure, clim_dict):
     bracketList = []
     pressBracket = 'notFound'
@@ -156,6 +155,7 @@ def loadData(site, sites_dict):
 
 def plotProfilesGrid(
     Yparam,
+    pressParam,
     paramData,
     plotTitle,
     zLabel,
@@ -171,6 +171,12 @@ def plotProfilesGrid(
     span,
     spanString
 ):
+    ### QC check for grid!!!
+    if 'pco2' in Yparam:
+        paramData = paramData.where((paramData[Yparam] < 2000), drop=True)
+    elif 'par' in Yparam:
+        paramData = paramData.where((paramData[Yparam] > 0) & (paramData[Yparam] < 2000), drop=True)
+
     # Initiate fileName list
     fileNameList = []
 
@@ -247,7 +253,7 @@ def plotProfilesGrid(
     xMax = endDate + timedelta(days=int(span) * 0.002)
     baseDS = paramData.sel(time=slice(startDate, endDate))
     scatterX = baseDS.time.values
-    scatterY = baseDS.seawater_pressure.values
+    scatterY = baseDS[pressParam].values
     scatterZ = baseDS[Yparam].values
     fig, ax = setPlot()
 
@@ -255,9 +261,11 @@ def plotProfilesGrid(
         # create interpolation grid
         xMinTimestamp = xMin.timestamp()
         xMaxTimestamp = xMax.timestamp()
-        xi = np.arange(xMinTimestamp, xMaxTimestamp, 3600)
-        yi = np.arange(yMin, yMax, 0.5)
-        xi, yi = np.meshgrid(xi, yi)
+        # x grid in seconds, with points every 1 hour (3600 seconds)
+        xi_arr = np.arange(xMinTimestamp, xMaxTimestamp, 10800)
+        # y grid in meters, with points every 1/2 meter
+        yi_arr = np.arange(yMin, yMax, 1)
+        xi, yi = np.meshgrid(xi_arr, yi_arr)
 
         unix_epoch = np.datetime64(0, 's')
         one_second = np.timedelta64(1, 's')
@@ -270,16 +278,34 @@ def plotProfilesGrid(
             (scatterX_TS, scatterY), scatterZ, (xi, yi), method='linear'
         )
         xiDT = xi.astype('datetime64[s]')
-        # mask out any time gaps greater than 1 day
-        timeGaps = np.where(np.diff(scatterX_TS) > 86400)
-        if len(timeGaps[0]) > 1:
-            gaps = timeGaps[0]
-            for gap in gaps:
-                gapMask = (xi > scatterX_TS[gap]) & (
-                    xi < scatterX_TS[gap + 1]
-                )
-                zi[gapMask] = np.nan
 
+
+	# create boolean mask for grid bins outside of 
+        # time and pressure thresholds for interpolation
+        # (gaps < 1 day and 5 meters)
+        scatterX_TS_bins = np.digitize(scatterX_TS,xi_arr)
+        scatterY_bins = np.digitize(scatterY,yi_arr)
+
+        gridCoordinates = np.dstack((scatterY_bins,scatterX_TS_bins))
+        validBins = np.unique(gridCoordinates,axis=1)
+        binList = list(validBins[0])
+
+        ### set interpolation thresholds: 
+        ### 5 meters = 10 bins
+        ### 1 day = 24 bins
+        yThreshold = 5
+        xThreshold = 24
+        scatterMask = np.full(zi.shape,False)
+        for i in range(0,len(binList)):
+            binY = binList[i].item(0)
+            binX = binList[i].item(1)
+            ymin = int(binY - (yThreshold/2))
+            ymax = int(binY + (yThreshold/2))
+            xmin = int(binX - (xThreshold/2))
+            xmax = int(binX + (xThreshold/2))
+            scatterMask[ymin:ymax,xmin:xmax] = True
+
+        zi[~scatterMask] = np.nan
         # plot filled contours
         profilePlot = plt.contourf(xiDT, yi, zi, 50, cmap=colorMap)
         emptySlice = 'no'

@@ -16,8 +16,14 @@ HERE = Path(__file__).parent.absolute()
 PARAMS_DIR = HERE.joinpath('params')
 PLOT_DIR = Path('QAQCplots')
 
-selection_mapping = {'profiler': 'CTD-PROFILER', 'fixed': 'CTD-FIXED'}
-
+selection_mapping = {'ctd-profiler': 'CTD-PROFILER', 
+                     'ctd-fixed': 'CTD-FIXED',
+                     'flr-profiler': 'FLR-PROFILER',
+                     'nut-profiler': 'NUT-PROFILER',
+                     'par-profiler': 'PAR-PROFILER',
+                     'pco2-profiler': 'PCO2-PROFILER',
+                     'ph-profiler': 'PH-PROFILER'
+                     }
 
 # create dictionary of sites key for filePrefix, nearestNeighbors
 sites_dict = (
@@ -187,6 +193,7 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
                         yMax = int(depthMinMax[1])
                     plots = dashFunc.plotProfilesGrid(
                         Yparam,
+                        pressParam,
                         paramData,
                         plotTitle,
                         yLabel,
@@ -302,18 +309,18 @@ def parse_args():
     arg_parser = argparse.ArgumentParser(
         description='QAQC Dashboard Plot Creator'
     )
-    arg_parser.add_argument('--time', type=str, default='2020-06-30')
+    arg_parser.add_argument('--time', type=str, default='2016-01-01')
     arg_parser.add_argument(
         '--instrument',
         type=str,
-        default='profiler',
+        default='ctd-profiler',
         help=f"Choices {str(list(selection_mapping.keys()))}",
     )
     arg_parser.add_argument(
         '--workers', type=int, default=3, help=f"The number of workers"
     )
-    arg_parser.add_argument('--span', type=str, default='7')
-    arg_parser.add_argument('--threshold', type=int, default='1000000')
+    arg_parser.add_argument('--span', type=str, default='365')
+    arg_parser.add_argument('--threshold', type=int, default='500000')
 
     return arg_parser.parse_args()
 

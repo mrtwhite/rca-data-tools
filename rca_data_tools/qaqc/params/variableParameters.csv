@@ -1,5 +1,10 @@
-﻿variable,min,max,profileMin,profileMax,label,colorMap
+variable,min,max,profileMin,profileMax,label,colorMap
 temperature,0,15,5,20,"degrees C",thermal
 salinity,31,35,30,35,"psu",haline
 density,1020,1045,1022,1030,"kg/m^3",dense
-oxygen,0,550,0,550,"umol/kg",matter
+oxygen,0,550,0,550,"uMol/kg",matter
+nitrate,0,50,0,30,"uMol",deep
+chlorophyll,0,3,0,3,"mg/m^3",tempo
+par,0,100,0,100,"par",solar
+pco2,200,2000,200,1200,"uMol",matter
+ph,6,9,7.4,8.4,"pH",matter

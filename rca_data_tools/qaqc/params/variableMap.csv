@@ -1,7 +1,12 @@
 parameter,variableNames
 temperature,"""seawater_temperature"""
 conductivity,"""ctdbp_no_seawater_conductivity"""
-pressure,"""ctdbp_no_seawater_pressure,seawater_pressure"""
+pressure,"""ctdbp_no_seawater_pressure,seawater_pressure,int_ctd_pressure"""
 density,"""density"""
 oxygen,"""dissolved_oxygen,corrected_dissolved_oxygen"""
 salinity,"""practical_salinity"""
+chlorophyll,"""fluorometric_chlorophyll_a"""
+nitrate,"""nitrate_concentration"""
+par,"""par_counts_output"""
+pco2,"""pco2_seawater"""
+ph,"""ph_seawater"""

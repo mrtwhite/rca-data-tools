@@ -1,3 +1,8 @@
 instrument,plotParameters
 CTD-FIXED,"""temperature,salinity,density,oxygen"""
 CTD-PROFILER,"""temperature,salinity,density,oxygen"""
+FLR-PROFILER,"""chlorophyll"""
+NUT-PROFILER,"""nitrate"""
+PAR-PROFILER,"""par"""
+PCO2-PROFILER,"""pco2"""
+PH-PROFILER,"""ph"""
