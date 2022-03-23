@@ -22,7 +22,7 @@ selection_mapping = {'ctd-profiler': 'CTD-PROFILER',
                      'pco2-profiler': 'PCO2-PROFILER',
                      'ph-profiler': 'PH-PROFILER'
                      }
-
+span_dict = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
 # create dictionary of sites key for filePrefix, nearestNeighbors
 sites_dict = (
     pd.read_csv(PARAMS_DIR.joinpath('sitesDictionaryPanel.csv'))
@@ -96,7 +96,7 @@ def run_dashboard_creation(
     plotList = []
     logger.info(f"site: {site}")
     logger.info(f"span: {span}")
-    span_dict = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
+    
     spanString = span_dict[span]
     # load data for site
     siteData = dashboard.loadData(site, sites_dict)
