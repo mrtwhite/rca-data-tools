@@ -1,14 +1,11 @@
+# -*- coding: utf-8 -*-
 import ast
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta
 import gc
-import glob
 import io
 import json
-from loguru import logger
 import numpy as np
-import os
 import pandas as pd
-import re
 import requests
 import s3fs
 import statistics as st
@@ -16,13 +13,12 @@ import xarray as xr
 
 
 import matplotlib.pyplot as plt
-import matplotlib.font_manager
 import matplotlib.dates as mdates
 import matplotlib.lines as mlines
 from matplotlib.cm import ScalarMappable
 import matplotlib.colors as colors
 from matplotlib.colors import ListedColormap
-import cmocean
+import cmocean # noqa
 from scipy.interpolate import griddata
 
 def pressureBracket(pressure, clim_dict):
@@ -92,62 +88,88 @@ def extractClim(timeRef, profileDepth, overlayData_clim):
 
     return climInterpolated_hour
 
-def loadQARTOD(refDes,param,sensorType):
-    
-    (site,node,sensor1,sensor2) = refDes.split('-')
+
+def loadQARTOD(refDes, param, sensorType, logger=None):
+    if logger is None:
+        from loguru import logger
+
+    (site, node, sensor1, sensor2) = refDes.split('-')
     sensor = sensor1 + '-' + sensor2
-        
-    ### Load climatology and gross range values
+
+    # Load climatology and gross range values
 
     githubBaseURL = 'https://raw.githubusercontent.com/oceanobservatories/qc-lookup/master/qartod/'
-    clim_URL = githubBaseURL + sensorType + '/climatology_tables/' + refDes + '-' + param + '.csv'
-    grossRange_URL = githubBaseURL + sensorType + '/' + sensorType + '_qartod_gross_range_test_values.csv'
-    
+    clim_URL = (
+        githubBaseURL
+        + sensorType
+        + '/climatology_tables/'
+        + refDes
+        + '-'
+        + param
+        + '.csv'
+    )
+    grossRange_URL = (
+        githubBaseURL
+        + sensorType
+        + '/'
+        + sensorType
+        + '_qartod_gross_range_test_values.csv'
+    )
+
     download = requests.get(grossRange_URL)
     if download.status_code == 200:
-        df_grossRange = pd.read_csv(io.StringIO(download.content.decode('utf-8')))
-        qcConfig = df_grossRange.qcConfig[(df_grossRange.subsite == site) & (df_grossRange.node == node) & (df_grossRange.sensor == sensor)]
+        df_grossRange = pd.read_csv(
+            io.StringIO(download.content.decode('utf-8'))
+        )
+        qcConfig = df_grossRange.qcConfig[
+            (df_grossRange.subsite == site)
+            & (df_grossRange.node == node)
+            & (df_grossRange.sensor == sensor)
+        ]
         qcConfig_json = qcConfig.values[0].replace("'", "\"")
         grossRange_dict = json.loads(qcConfig_json)
     else:
-        logger.warning(f"error retrieving gross range data for {refDes} {param} {sensorType}")
+        logger.warning(
+            f"error retrieving gross range data for {refDes} {param} {sensorType}"
+        )
         grossRange_dict = {}
 
     download = requests.get(clim_URL)
     if download.status_code == 200:
         df_clim = pd.read_csv(io.StringIO(download.content.decode('utf-8')))
         climRename = {
-                'Unnamed: 0':'depth',
-                '[1, 1]':'1',
-                '[2, 2]':'2',
-                '[3, 3]':'3',
-                '[4, 4]':'4',
-                '[5, 5]':'5',
-                '[6, 6]':'6',
-                '[7, 7]':'7',
-                '[8, 8]':'8',
-                '[9, 9]':'9',
-                '[10, 10]':'10',
-                '[11, 11]':'11',
-                '[12, 12]':'12'           
-            } 
-        
+            'Unnamed: 0': 'depth',
+            '[1, 1]': '1',
+            '[2, 2]': '2',
+            '[3, 3]': '3',
+            '[4, 4]': '4',
+            '[5, 5]': '5',
+            '[6, 6]': '6',
+            '[7, 7]': '7',
+            '[8, 8]': '8',
+            '[9, 9]': '9',
+            '[10, 10]': '10',
+            '[11, 11]': '11',
+            '[12, 12]': '12',
+        }
+
         df_clim.rename(columns=climRename, inplace=True)
         clim_dict = df_clim.set_index('depth').to_dict()
     else:
-        logger.warning(f"error retrieving climatology data for {refDes} {param} {sensorType}")
+        logger.warning(
+            f"error retrieving climatology data for {refDes} {param} {sensorType}"
+        )
         clim_dict = {}
-    
-    return(grossRange_dict,clim_dict)
-    
-    
+
+    return (grossRange_dict, clim_dict)
+
 
 def loadData(site, sites_dict):
     fs = s3fs.S3FileSystem(anon=True)
     zarrDir = 'ooi-data/' + sites_dict[site]['zarrFile']
     zarr_store = fs.get_mapper(zarrDir)
-    ### TODO: only request parameters listed in sites_dict[site][dataParameters]?
-    ### requestParams = sites_dict[site]['dataParameters'].strip('"').split(',')
+    # TODO: only request parameters listed in sites_dict[site][dataParameters]?
+    # requestParams = sites_dict[site]['dataParameters'].strip('"').split(',')
     ds = xr.open_zarr(zarr_store, consolidated=True)
 
     return ds
@@ -169,7 +191,7 @@ def plotProfilesGrid(
     overlayData_clim,
     overlayData_near,
     span,
-    spanString
+    spanString,
 ):
     ### QC check for grid!!!
     if 'pco2' in Yparam:
@@ -253,8 +275,11 @@ def plotProfilesGrid(
     xMax = endDate + timedelta(days=int(span) * 0.002)
     baseDS = paramData.sel(time=slice(startDate, endDate))
     scatterX = baseDS.time.values
-    scatterY = baseDS[pressParam].values
-    scatterZ = baseDS[Yparam].values
+    scatterY = np.array([])
+    scatterZ = np.array([])
+    if len(scatterX) > 0:
+        scatterY = baseDS.seawater_pressure.values
+        scatterZ = baseDS[Yparam].values
     fig, ax = setPlot()
 
     if scatterX.size != 0:
@@ -269,43 +294,20 @@ def plotProfilesGrid(
 
         unix_epoch = np.datetime64(0, 's')
         one_second = np.timedelta64(1, 's')
-        scatterX_TS = [
-           ((dt64 - unix_epoch) / one_second) for dt64 in scatterX
-        ]
+        scatterX_TS = [((dt64 - unix_epoch) / one_second) for dt64 in scatterX]
 
         # interpolate data to grid
         zi = griddata(
             (scatterX_TS, scatterY), scatterZ, (xi, yi), method='linear'
         )
         xiDT = xi.astype('datetime64[s]')
-
-
-	# create boolean mask for grid bins outside of 
-        # time and pressure thresholds for interpolation
-        # (gaps < 1 day and 5 meters)
-        scatterX_TS_bins = np.digitize(scatterX_TS,xi_arr)
-        scatterY_bins = np.digitize(scatterY,yi_arr)
-
-        gridCoordinates = np.dstack((scatterY_bins,scatterX_TS_bins))
-        validBins = np.unique(gridCoordinates,axis=1)
-        binList = list(validBins[0])
-
-        ### set interpolation thresholds: 
-        ### 5 meters = 10 bins
-        ### 1 day = 24 bins
-        yThreshold = 5
-        xThreshold = 24
-        scatterMask = np.full(zi.shape,False)
-        for i in range(0,len(binList)):
-            binY = binList[i].item(0)
-            binX = binList[i].item(1)
-            ymin = int(binY - (yThreshold/2))
-            ymax = int(binY + (yThreshold/2))
-            xmin = int(binX - (xThreshold/2))
-            xmax = int(binX + (xThreshold/2))
-            scatterMask[ymin:ymax,xmin:xmax] = True
-
-        zi[~scatterMask] = np.nan
+        # mask out any time gaps greater than 1 day
+        timeGaps = np.where(np.diff(scatterX_TS) > 86400)
+        if len(timeGaps[0]) > 1:
+            gaps = timeGaps[0]
+            for gap in gaps:
+                gapMask = (xi > scatterX_TS[gap]) & (xi < scatterX_TS[gap + 1])
+                zi[gapMask] = np.nan
         # plot filled contours
         profilePlot = plt.contourf(xiDT, yi, zi, 50, cmap=colorMap)
         emptySlice = 'no'
@@ -401,8 +403,7 @@ def plotProfilesGrid(
                             )
 
                     climTime_TS = [
-                        ((dt64 - unix_epoch) / one_second)
-                        for dt64 in timeList
+                        ((dt64 - unix_epoch) / one_second) for dt64 in timeList
                     ]
                     # interpolate climatology data
                     clim_zi = griddata(
@@ -436,13 +437,7 @@ def plotProfilesGrid(
                     cbar.ax.tick_params(length=2, width=0.5, labelsize=4)
                     plt.xlim(xMin, xMax)
 
-                    fileName = (
-                        fileName_base
-                        + '_'
-                        + spanString
-                        + '_'
-                        + 'clim'
-                    )
+                    fileName = fileName_base + '_' + spanString + '_' + 'clim'
                     fig.savefig(fileName + '_full.png', dpi=300)
                     fileNameList.append(fileName + '_full.png')
 
@@ -510,20 +505,14 @@ def plotProfilesGrid(
                         xycoords='axes fraction',
                     )
 
-                    fileName = (
-                        fileName_base
-                        + '_'
-                        + spanString
-                        + '_'
-                        + 'clim'
-                    )
+                    fileName = fileName_base + '_' + spanString + '_' + 'clim'
                     fig.savefig(fileName + '_full.png', dpi=300)
                     fileNameList.append(fileName + '_full.png')
                     fig.savefig(fileName + '_local.png', dpi=300)
                     fileNameList.append(fileName + '_local.png')
 
     else:
-        fig,ax = setPlot()
+        fig, ax = setPlot()
         profilePlot = plt.scatter(
             scatterX, scatterY, c=scatterZ, marker='.', cmap='cmo.balance'
         )
@@ -558,7 +547,7 @@ def plotScatter(
     overlayData_near,
     plotMarkerSize,
     span,
-    spanString
+    spanString,
 ):
     # Initiate fileName list
     fileNameList = []
@@ -634,21 +623,19 @@ def plotScatter(
     xMax = endDate + timedelta(days=int(span) * 0.002)
     baseDS = paramData.sel(time=slice(startDate, endDate))
     scatterX = baseDS.time.values
-    scatterY = baseDS.values
+    scatterY = np.array([])
+    if len(scatterX) > 0:
+        scatterY = baseDS.values
     fig, ax = setPlot()
     emptySlice = 'no'
     if 'large' in plotMarkerSize:
-        plt.plot(
-            scatterX, scatterY, '.', color=lineColors[0], markersize=2
-        )
+        plt.plot(scatterX, scatterY, '.', color=lineColors[0], markersize=2)
     elif 'medium' in plotMarkerSize:
-        plt.plot(
-            scatterX, scatterY, '.', color=lineColors[0], markersize=0.75
-        )
+        plt.plot(scatterX, scatterY, '.', color=lineColors[0], markersize=0.75)
     elif 'small' in plotMarkerSize:
         plt.plot(scatterX, scatterY, ',', color=lineColors[0])
     plt.xlim(xMin, xMax)
-    #####ylim_current = plt.gca().get_ylim()
+    # ylim_current = plt.gca().get_ylim()
     if scatterX.size == 0:
         print('slice is empty!')
         plt.annotate(
@@ -668,7 +655,7 @@ def plotScatter(
             plt.xlim(xMin, xMax)
             # plot previous 6 years of data slices for timespan
             print('adding time machine plot')
-            ### TODO: make this a smarter iterator about how many years of data exist...
+            # TODO: make this a smarter iterator about how many years of data exist...
             numYears = 6
             traces = []
             for z in range(0, numYears):
@@ -682,7 +669,9 @@ def plotScatter(
                     timedelta(days=365 * z)
                 )
                 timeX = timeDS.plotTime.values
-                timeY = timeDS.values
+                timeY = np.array([])
+                if len(timeX) > 0:
+                    timeY = timeDS.values
                 c = lineColors[z]
                 if 'large' in plotMarkerSize:
                     plt.plot(
@@ -713,7 +702,7 @@ def plotScatter(
                 del timeDS
                 gc.collect()
 
-            ##generating custom legend
+            # generating custom legend
             handles, labels = ax.get_legend_handles_labels()
             patches = []
             for handle, label in zip(handles, labels):
@@ -729,12 +718,8 @@ def plotScatter(
                     )
                 )
 
-            legend = ax.legend(
-                handles=patches, loc="upper right", fontsize=3
-            )
-            fileName = (
-                fileName_base + '_' + spanString + '_' + overlay
-            )
+            legend = ax.legend(handles=patches, loc="upper right", fontsize=3)
+            fileName = fileName_base + '_' + spanString + '_' + overlay
             fig.savefig(fileName + '_full.png', dpi=300)
             fileNameList.append(fileName + '_full.png')
             plt.ylim(yMin, yMax)
@@ -755,7 +740,7 @@ def plotScatter(
                             '.',
                             color=lineColors[0],
                             markersize=2,
-                            )
+                        )
                     elif 'medium' in plotMarkerSize:
                         plt.plot(
                             scatterX,
@@ -765,9 +750,7 @@ def plotScatter(
                             markersize=0.75,
                         )
                     elif 'small' in plotMarkerSize:
-                        plt.plot(
-                            scatterX, scatterY, ',', color=lineColors[0]
-                        )
+                        plt.plot(scatterX, scatterY, ',', color=lineColors[0])
 
                     plt.fill_between(
                         overlayData_clim.index,
@@ -790,9 +773,7 @@ def plotScatter(
                         xycoords='axes fraction',
                     )
 
-                fileName = (
-                    fileName_base + '_' + spanString + '_' + 'clim'
-                )
+                fileName = fileName_base + '_' + spanString + '_' + 'clim'
                 fig.savefig(fileName + '_full.png', dpi=300)
                 fileNameList.append(fileName + '_full.png')
                 plt.ylim(yMin, yMax)

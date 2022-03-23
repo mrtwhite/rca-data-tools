@@ -3,18 +3,16 @@ import concurrent.futures
 from datetime import datetime
 from dateutil import parser
 import gc
-from loguru import logger
 import pandas as pd
 from pathlib import Path
 import xarray as xr
 
-from rca_data_tools.qaqc import dashboard as dashFunc
-from rca_data_tools.qaqc import decimateFunctions as decimate
-from rca_data_tools.qaqc import create_index
+from rca_data_tools.qaqc import dashboard
+from rca_data_tools.qaqc import decimate
 
 HERE = Path(__file__).parent.absolute()
 PARAMS_DIR = HERE.joinpath('params')
-PLOT_DIR = Path('QAQCplots')
+PLOT_DIR = Path('QAQC_plots')
 
 selection_mapping = {'ctd-profiler': 'CTD-PROFILER', 
                      'ctd-fixed': 'CTD-FIXED',
@@ -72,58 +70,36 @@ def map_concurrency(
     return results
 
 
-def create_plot_for_depth(
-    profileDepth,
-    paramData,
-    Yparam,
-    pressParam,
-    plotTitle,
-    imageName_base,
-    overlayData_clim,
-    yLabel,
-    profile_paramMin,
-    profile_paramMax,
-    overlayData_near,
+def run_dashboard_creation(
+    site,
+    paramList,
     timeRef,
+    plotInstrument,
+    span,
+    decimationThreshold,
+    logger=None,
 ):
-    print(f"Depth: {profileDepth}")
-    paramData_depth = paramData[Yparam].where(
-        (int(profileDepth) < paramData[pressParam])
-        & (paramData[pressParam] < (int(profileDepth) + 0.5))
-    )
-    plotTitle_depth = plotTitle + ': ' + profileDepth + ' meters'
-    imageName_base_depth = imageName_base + '_' + profileDepth + 'meters'
-    if overlayData_clim:
-        overlayData_clim_extract = dashFunc.extractClim(
-            profileDepth, overlayData_clim, timeRef
-        )
+    if logger == 'prefect':
+        import prefect
+
+        logger = prefect.context.get("logger")
     else:
-        overlayData_clim_extract = pd.DataFrame()
-    dashFunc.plotScatter(
-        paramData_depth,
-        plotTitle_depth,
-        yLabel,
-        timeRef,
-        profile_paramMin,
-        profile_paramMax,
-        imageName_base_depth,
-        overlayData_clim_extract,
-        overlayData_near,
-        'medium',
-        span,
-        spanString
-    )
+        from loguru import logger
 
+    if isinstance(timeRef, str):
+        timeRef = parser.parse(timeRef)
 
-def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decimationThreshold):
+    # Ensure that plot dir is created!
+    PLOT_DIR.mkdir(exist_ok=True)
+
     now = datetime.utcnow()
     plotList = []
-    logger.info("site: {}", site)
-    logger.info("span: {}", span)
+    logger.info(f"site: {site}")
+    logger.info(f"span: {span}")
     span_dict = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
     spanString = span_dict[span]
     # load data for site
-    siteData = dashFunc.loadData(site, sites_dict)
+    siteData = dashboard.loadData(site, sites_dict)
     fileParams = sites_dict[site]['dataParameters'].strip('"').split(',')
     # drop un-used variables from dataset
     allVar = list(siteData.keys())
@@ -131,17 +107,19 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
     siteData = siteData.drop(dropList)
     if int(span) == 365:
         if len(siteData['time']) > decimationThreshold:
-            ### decimate data
-            siteData_df = decimate.downsample(siteData, decimationThreshold)
-            ### turn dataframe into dataset
+            # decimate data
+            siteData_df = decimate.downsample(
+                siteData, decimationThreshold, logger=logger
+            )
+            # turn dataframe into dataset
             del siteData
             gc.collect()
-            siteData = xr.Dataset.from_dataframe(siteData_df,sparse=False)
+            siteData = xr.Dataset.from_dataframe(siteData_df, sparse=False)
             siteData = siteData.swap_dims({'index': 'time'})
             siteData = siteData.reset_coords()
-        
+
     for param in paramList:
-        logger.info("paramter: {}", param)
+        logger.info(f"parameter: {param}")
         variableParams = variable_dict[param].strip('"').split(',')
         parameterList = [
             value for value in variableParams if value in fileParams
@@ -163,8 +141,8 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
             overlayData_clim = {}
             overlayData_grossRange = {}
             sensorType = site.split('-')[3][0:5].lower()
-            (overlayData_grossRange, overlayData_clim) = dashFunc.loadQARTOD(
-                site, Yparam, sensorType
+            (overlayData_grossRange, overlayData_clim) = dashboard.loadQARTOD(
+                site, Yparam, sensorType, logger=logger
             )
             overlayData_near = {}
             # overlayData_near = loadNear(site)
@@ -191,7 +169,7 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
                     if 'None' not in depthMinMax:
                         yMin = int(depthMinMax[0])
                         yMax = int(depthMinMax[1])
-                    plots = dashFunc.plotProfilesGrid(
+                    plots = dashboard.plotProfilesGrid(
                         Yparam,
                         pressParam,
                         paramData,
@@ -207,7 +185,7 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
                         overlayData_clim,
                         overlayData_near,
                         span,
-                        spanString
+                        spanString,
                     )
                     plotList.append(plots)
                     depths = sites_dict[site]['depths'].strip('"').split(',')
@@ -228,13 +206,13 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
                             )
                             if overlayData_clim:
                                 overlayData_clim_extract = (
-                                    dashFunc.extractClim(
+                                    dashboard.extractClim(
                                         timeRef, profileDepth, overlayData_clim
                                     )
                                 )
                             else:
                                 overlayData_clim_extract = pd.DataFrame()
-                            plots = dashFunc.plotScatter(
+                            plots = dashboard.plotScatter(
                                 Yparam,
                                 paramData_depth,
                                 plotTitle_depth,
@@ -247,19 +225,19 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
                                 overlayData_near,
                                 'medium',
                                 span,
-                                spanString
+                                spanString,
                             )
                             plotList.append(plots)
             else:
                 paramData = siteData[Yparam]
                 if overlayData_clim:
-                    overlayData_clim_extract = dashFunc.extractClim(
+                    overlayData_clim_extract = dashboard.extractClim(
                         timeRef, '0', overlayData_clim
                     )
                 else:
                     overlayData_clim_extract = pd.DataFrame()
                 # PLOT
-                plots = dashFunc.plotScatter(
+                plots = dashboard.plotScatter(
                     Yparam,
                     paramData,
                     plotTitle,
@@ -272,7 +250,7 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
                     overlayData_near,
                     'small',
                     span,
-                    spanString
+                    spanString,
                 )
                 plotList.append(plots)
 
@@ -282,11 +260,18 @@ def run_dashboard_creation(site, paramList, timeRef, plotInstrument, span, decim
     gc.collect()
     end = datetime.utcnow()
     elapsed = end - now
-    logger.info("{} finished plotting: Time elapsed ({})", site, str(elapsed))
+    logger.info(f"{site} finished plotting: Time elapsed ({elapsed})")
     return plotList
 
 
-def organize_pngs():
+def organize_pngs(
+    sync_to_s3=False, bucket_name='qaqc.ooica.net', fs_kwargs={}
+):
+    if sync_to_s3 is True:
+        import fsspec
+
+        S3FS = fsspec.filesystem('s3', **fs_kwargs)
+
     for i in PLOT_DIR.iterdir():
         if i.is_file():
             if '.png' in str(i):
@@ -294,11 +279,19 @@ def organize_pngs():
                 subsite = fname.split('-')[0]
 
                 subsite_dir = PLOT_DIR / subsite
-                if not subsite_dir.exists():
-                    subsite_dir.mkdir()
+                subsite_dir.mkdir(exist_ok=True)
 
                 destination = subsite_dir / fname
                 i.replace(destination)
+
+                # Sync to s3
+                if sync_to_s3 is True:
+                    fs_path = '/'.join(
+                        [bucket_name, PLOT_DIR.name, subsite_dir.name, fname]
+                    )
+                    if S3FS.exists(fs_path):
+                        S3FS.rm(fs_path)
+                    S3FS.put(str(destination.absolute()), fs_path)
             else:
                 print(f"{i} is not an image file ... skipping ...")
         else:
@@ -317,15 +310,19 @@ def parse_args():
         help=f"Choices {str(list(selection_mapping.keys()))}",
     )
     arg_parser.add_argument(
-        '--workers', type=int, default=3, help=f"The number of workers"
+        '--span',
+        type=str,
+        default='7',
+        help=f"Choices {str(list(span_dict.keys()))}",
     )
-    arg_parser.add_argument('--span', type=str, default='365')
-    arg_parser.add_argument('--threshold', type=int, default='500000')
+    arg_parser.add_argument('--threshold', type=int, default=1000000)
 
     return arg_parser.parse_args()
 
 
 def main():
+    from loguru import logger
+
     args = parse_args()
 
     # User options ...
@@ -353,21 +350,23 @@ def main():
             dataList.append(key)
 
     now = datetime.utcnow()
-    logger.info("======= Creation started at: {} ======", now.isoformat())
+    logger.info(f"======= Creation started at: {now.isoformat()} ======")
     for site in dataList:
-        sitePlotList = run_dashboard_creation(
-            site, paramList, timeRef, plotInstrument, args.span, args.threshold
+        run_dashboard_creation(
+            site,
+            paramList,
+            timeRef,
+            plotInstrument,
+            args.span,
+            args.threshold,
+            logger=logger,
         )
         # Organize pngs into folders
         organize_pngs()
 
-    create_index.main()
-
     end = datetime.utcnow()
     logger.info(
-        "======= Creation finished at: {}. Time elapsed ({}) ======",
-        end.isoformat(),
-        (end - now),
+        f"======= Creation finished at: {end.isoformat()}. Time elapsed ({(end - now)}) ======",
     )
 
 

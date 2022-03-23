@@ -1,23 +1,12 @@
-#!/usr/local/bin/python3
-
 # -*- coding: utf-8 -*-
-
-
-
-# import packages
-
 import dask
-import datetime
 import gc
 import math
 import numba
 import numpy as np
 import pandas as pd
-import s3fs
-import xarray as xr
 
 from functools import reduce
-
 
 
 @numba.njit
@@ -28,7 +17,9 @@ def execute_decimation(threshold, every, data, sampled, time_array, a):
         avg_y = 0
         avg_range_start = int(math.floor((i + 1) * every) + 1)
         avg_range_end = int(math.floor((i + 2) * every) + 1)
-        avg_rang_end = avg_range_end if avg_range_end < len(data) else len(data)
+        avg_rang_end = (
+            avg_range_end if avg_range_end < len(data) else len(data)
+        )
 
         avg_range_length = avg_rang_end - avg_range_start
 
@@ -85,7 +76,7 @@ def largest_triangle_three_buckets(data, threshold):
     """
     Return a downsampled version of data.
     Original code found at https://github.com/devoxi/lttb-py.
-    
+
     Args:
         data: Original data that will be decimated.
               Must be a numpy array or list of lists.
@@ -136,34 +127,33 @@ def perform_decimation(ds, threshold):
     cols = [time_da.name, ds.name]
     da_data = dask.array.stack([time_da.data, ds.data], axis=1)
     decdata = largest_triangle_three_buckets(da_data, threshold)
-    #client.cancel(da_data)
+    # client.cancel(da_data)
     del ds
     gc.collect()
     return pd.DataFrame(decdata, columns=cols)
 
-def downsample(raw_ds, threshold):
-    print(f"{datetime.datetime.now().strftime('%H:%M:%S')}:    Get list of data arrays")
+
+def downsample(raw_ds, threshold, logger=None):
+    if logger is None:
+        from loguru import logger
+
+    logger.debug("Get list of data arrays")
     da_list = (raw_ds[var] for var in raw_ds)
 
     df_list = []
     for da in da_list:
-        print(
-            f"{datetime.datetime.now().strftime('%H:%M:%S')}:    Executing decimation for {da.name}"
-        )
+        logger.debug(f"Executing decimation for {da.name}")
         decdf = perform_decimation(da, threshold)
         df_list.append(decdf)
 
         del decdf
         gc.collect()
-    print(
-        f"{datetime.datetime.now().strftime('%H:%M:%S')}:    Decimation process completed."
-    )
+    logger.debug("Decimation process completed.")
 
-    print(
-        f"{datetime.datetime.now().strftime('%H:%M:%S')}:    Creating decimated dataframe."
+    logger.debug("Creating decimated dataframe.")
+    final_df = reduce(
+        lambda left, right: pd.merge(left, right, on="time"), df_list
     )
-    final_df = reduce(lambda left, right: pd.merge(left, right, on="time"), df_list)
     final_df['time'] = pd.to_datetime(final_df['time'])
 
     return final_df
-
