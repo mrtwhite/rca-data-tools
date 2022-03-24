@@ -278,7 +278,7 @@ def plotProfilesGrid(
     scatterY = np.array([])
     scatterZ = np.array([])
     if len(scatterX) > 0:
-        scatterY = baseDS.seawater_pressure.values
+        scatterY = baseDS[pressParam].values
         scatterZ = baseDS[Yparam].values
     fig, ax = setPlot()
 
