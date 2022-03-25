@@ -17,7 +17,7 @@ PLOT_DIR = Path('QAQC_plots')
 selection_mapping = {'ctd-profiler': 'CTD-PROFILER', 
                      'ctd-fixed': 'CTD-FIXED',
                      'flr-profiler': 'FLR-PROFILER',
-                     'flr-fixed': 'FLR-PROFILER',
+                     'flr-fixed': 'FLR-FIXED',
                      'nut-profiler': 'NUT-PROFILER',
                      'nut-fixed': 'NUT-FIXED',
                      'par-profiler': 'PAR-PROFILER',
