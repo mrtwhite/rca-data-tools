@@ -165,7 +165,7 @@ def run_dashboard_creation(
                     logger.info("Error retriving pressure parameter!")
                 else:
                     pressParam = pressureParamList[0]
-                    paramData = siteData[[Yparam, pressParam]]
+                    paramData = siteData[[Yparam, pressParam]].chunk('auto')
                     colorMap = 'cmo.' + variable_paramDict[param]['colorMap']
                     depthMinMax = (
                         sites_dict[site]['depthMinMax'].strip('"').split(',')
