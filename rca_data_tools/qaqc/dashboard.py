@@ -18,6 +18,7 @@ import matplotlib.lines as mlines
 from matplotlib.cm import ScalarMappable
 import matplotlib.colors as colors
 from matplotlib.colors import ListedColormap
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import cmocean # noqa
 from scipy.interpolate import griddata
 
@@ -193,7 +194,7 @@ def plotProfilesGrid(
     span,
     spanString,
 ):
-    ### QC check for grid!!!
+    ### QC check for grid...this will be replaced with a new range for "gross range"
     if 'pco2' in Yparam:
         paramData = paramData.where((paramData[Yparam] < 2000), drop=True)
     elif 'par' in Yparam:
@@ -221,13 +222,13 @@ def plotProfilesGrid(
     balanceBig = plt.get_cmap('cmo.balance', 512)
     balanceBlue = ListedColormap(balanceBig(np.linspace(0, 0.5, 256)))
 
-    def setPlot():
+    def plotter(Xx,Yy,Zz,plotType,colorBar,annotation,params):
 
         plt.close('all')
         plt.rcParams["font.family"] = "serif"
 
         fig, ax = plt.subplots()
-        fig.set_size_inches(5.65, 1.75)
+        fig.set_size_inches(5, 1.75)
         fig.patch.set_facecolor('white')
         plt.title(plotTitle, fontsize=4, loc='left')
         plt.ylabel('Pressure (dbar)', fontsize=4)
@@ -265,7 +266,57 @@ def plotProfilesGrid(
         ax.xaxis.set_major_formatter(formatter)
         ax.grid(False)
         ax.invert_yaxis()
-        return (fig, ax)
+        plt.xlim(xMin, xMax)
+    
+        if 'contour' in plotType:
+            if 'local' in params['range']:
+                colorRange = params['vmax'] - params['vmin']
+                cbarticks = np.arange(params['vmin'],params['vmax'],colorRange/50)
+                graph = ax.contourf(Xx, Yy, Zz, cbarticks, cmap=colorBar)
+            else:
+                graph = ax.contourf(Xx, Yy, Zz, 50, cmap=colorBar)
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="2%", pad=0.05)
+            cbar = plt.colorbar(graph, cax=cax)
+            if 'local' in params['range']:
+                graph.set_clim(params['vmin'], params['vmax'])
+            cbar.update_ticks()
+            cbar.formatter.set_useOffset(False)
+            cbar.ax.set_ylabel(zLabel, fontsize=4)
+            cbar.ax.tick_params(length=2, width=0.5, labelsize=4)
+            
+        
+        if 'empty' in plotType:
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="2%", pad=0.05)
+            for axis in ['top','bottom','left','right']:
+                cax.spines[axis].set_linewidth(0)
+            cax.set_xticks([])
+            cax.set_yticks([])
+            plt.annotate(annotation, xy=(0.3, 0.5), xycoords='figure fraction')
+
+        if 'clim' in plotType:
+            if 'yes' in params['norm']:
+                graph = ax.contourf(Xx, Yy, Zz, 50, cmap=colorBar,vmin=params['vmin'],
+                                vmax=params['vmax'],norm=params['norm']['divnorm'])
+            else:
+                graph = ax.contourf(Xx, Yy, Zz, 50, cmap=colorBar,vmin=params['vmin'],vmax=params['vmax'])
+            plt.clim=(params['vmin'],params['vmax'])
+            plt.clim(-maxLim, maxLim)
+            m = ScalarMappable(cmap=graph.get_cmap())
+            m.set_array(graph.get_array())
+            m.set_clim(graph.get_clim())
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="2%", pad=0.05)
+            cbar = plt.colorbar(graph, cax=cax)
+            cbar.update_ticks()
+            cbar.formatter.set_useOffset(False)
+            cbar.ax.set_ylabel(zLabel, fontsize=4)
+            cbar.ax.tick_params(length=2, width=0.5, labelsize=4)
+        
+    
+        return fig
+
 
     endDate = timeRef
 
@@ -282,7 +333,6 @@ def plotProfilesGrid(
     if len(scatterX) > 0:
         scatterY = baseDS[pressParam].values
         scatterZ = baseDS[Yparam].values
-    fig, ax = setPlot()
 
     if scatterX.size != 0:
         # create interpolation grid
@@ -311,45 +361,30 @@ def plotProfilesGrid(
                 gapMask = (xi > scatterX_TS[gap]) & (xi < scatterX_TS[gap + 1])
                 zi[gapMask] = np.nan
         # plot filled contours
-        profilePlot = plt.contourf(xiDT, yi, zi, 50, cmap=colorMap)
+        params = {'range':'full'}
+        profilePlot = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
+        fileName = fileName_base + '_' + spanString + '_' + 'none'
+        profilePlot.savefig(fileName + '_full.png', dpi=300)
+        fileNameList.append(fileName + '_full.png')
+        params = {'range':'local'}
+        params['vmin'] = zMin
+        params['vmax'] = zMax
+        profilePlot = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
+        profilePlot.savefig(fileName + '_local.png', dpi=300)
+        fileNameList.append(fileName + '_local.png')
         emptySlice = 'no'
     else:
-        print('slice is empty!')
-        profilePlot = plt.scatter(
-            scatterX, scatterY, c=scatterZ, marker='.', cmap=colorMap
-        )
-        plt.annotate(
-            'No data available', xy=(0.3, 0.5), xycoords='axes fraction'
-        )
+        params = {'range':'full'}
+        profilePlot = plotter(0, 0, 0, 'empty', colorMap, 'No Data Available', params)
+        profilePlot.savefig(fileName + '_full.png', dpi=300)
+        fileNameList.append(fileName + '_full.png')
+        profilePlot.savefig(fileName + '_local.png', dpi=300)
+        fileNameList.append(fileName + '_local.png')
         emptySlice = 'yes'
-
-    plt.xlim(xMin, xMax)
-    cbar = fig.colorbar(profilePlot, ax=ax)
-    cbar.update_ticks()
-    cbar.formatter.set_useOffset(False)
-    cbar.ax.set_ylabel(zLabel, fontsize=4)
-    cbar.ax.tick_params(length=2, width=0.5, labelsize=4)
-
-    fileName = fileName_base + '_' + spanString + '_' + 'none'
-    fig.savefig(fileName + '_full.png', dpi=300)
-    fileNameList.append(fileName + '_full.png')
-    cbar.remove()
-    plt.clim(zMin, zMax)
-    m = ScalarMappable(cmap=profilePlot.get_cmap())
-    m.set_array(profilePlot.get_array())
-    m.set_clim(profilePlot.get_clim())
-    cbar = fig.colorbar(m, ax=ax)
-    cbar.update_ticks()
-    cbar.formatter.set_useOffset(False)
-    cbar.ax.set_ylabel(zLabel, fontsize=4)
-    cbar.ax.tick_params(length=2, width=0.5, labelsize=4)
-    fig.savefig(fileName + '_local.png', dpi=300)
-    fileNameList.append(fileName + '_local.png')
 
     if 'no' in emptySlice:
         for overlay in overlays:
             if 'clim' in overlay:
-                fig, ax = setPlot()
                 if overlayData_clim:
                     depthList = []
                     timeList = []
@@ -419,28 +454,14 @@ def plotProfilesGrid(
                         abs(np.nanmin(climDiff)), abs(np.nanmax(climDiff))
                     )
                     # plot filled contours
-                    profilePlot = plt.contourf(
-                        xiDT,
-                        yi,
-                        climDiff,
-                        50,
-                        cmap='cmo.balance',
-                        vmin=-maxLim,
-                        vmax=maxLim,
-                    )
-                    plt.clim(-maxLim, maxLim)
-                    m = ScalarMappable(cmap=profilePlot.get_cmap())
-                    m.set_array(profilePlot.get_array())
-                    m.set_clim(profilePlot.get_clim())
-                    cbar = fig.colorbar(m, ax=ax)
-                    cbar.update_ticks()
-                    cbar.formatter.set_useOffset(False)
-                    cbar.ax.set_ylabel(zLabel, fontsize=4)
-                    cbar.ax.tick_params(length=2, width=0.5, labelsize=4)
-                    plt.xlim(xMin, xMax)
-
+                    climParams = {}
+                    climParams['range'] = 'na'
+                    climParams['norm'] = 'no'
+                    climParams['vmin'] = -maxLim
+                    climParams['vmax'] = maxLim
+                    climPlot = plotter(xiDT, yi, climDiff, 'clim', 'cmo.balance', 'no', climParams)
                     fileName = fileName_base + '_' + spanString + '_' + 'clim'
-                    fig.savefig(fileName + '_full.png', dpi=300)
+                    climPlot.savefig(fileName + '_full.png', dpi=300)
                     fileNameList.append(fileName + '_full.png')
 
                     climDiffMin = np.nanmin(climDiff)
@@ -456,81 +477,48 @@ def plotProfilesGrid(
                     else:
                         colorMapLocal = 'cmo.balance'
                         divColor = 'yes'
-
-                    fig, ax = setPlot()
                     if 'yes' in divColor:
                         divnorm = colors.TwoSlopeNorm(
                             vmin=climDiffMin, vcenter=0, vmax=climDiffMax
                         )
-                        profilePlot = plt.contourf(
-                            xiDT,
-                            yi,
-                            climDiff,
-                            50,
-                            cmap=colorMapLocal,
-                            vmin=climDiffMin,
-                            vmax=climDiffMax,
-                            norm=divnorm,
-                        )
-                        cbar = fig.colorbar(profilePlot, ax=ax)
+                        # plot filled contours
+                        climParams = {}
+                        climParams['range'] = 'na'
+                        climParams['norm'] = 'yes'
+                        climParams['norm']['divnorm'] = divnorm
+                        climParams['vmin'] = climDiffMin
+                        climParams['vmax'] = climDiffMax
+                        climPlot = plotter(xiDT, yi, climDiff, 'clim', 'cmo.balance', 'no', climParams)
+  
                     else:
-                        profilePlot = plt.contourf(
-                            xiDT,
-                            yi,
-                            climDiff,
-                            50,
-                            cmap=colorMapLocal,
-                            vmin=climDiffMin,
-                            vmax=climDiffMax,
-                        )
+                        # plot filled contours
+                        climParams = {}
+                        climParams['range'] = 'na'
+                        climParams['norm'] = 'no'
+                        climParams['vmin'] = climDiffMin
+                        climParams['vmax'] = climDiffMax
+                        climPlot = plotter(xiDT, yi, climDiff, 'clim', 'cmo.balance', 'no', climParams)
 
-                        plt.clim(climDiffMin, climDiffMax)
-                        m = ScalarMappable(cmap=profilePlot.get_cmap())
-                        m.set_array(profilePlot.get_array())
-                        m.set_clim(profilePlot.get_clim())
-                        cbar = fig.colorbar(m, ax=ax)
-
-                    cbar.update_ticks()
-                    cbar.formatter.set_useOffset(False)
-                    cbar.ax.set_ylabel(zLabel, fontsize=4)
-                    cbar.ax.tick_params(length=2, width=0.5, labelsize=4)
-                    plt.xlim(xMin, xMax)
-
-                    fig.savefig(fileName + '_local.png', dpi=300)
+                    climPlot.savefig(fileName + '_local.png', dpi=300)
                     fileNameList.append(fileName + '_local.png')
 
                 else:
                     print('climatology is empty!')
-                    plt.annotate(
-                        'No climatology data available',
-                        xy=(0.3, 0.5),
-                        xycoords='axes fraction',
-                    )
-
+                    params = {'range':'full'}
+                    profilePlot = plotter(0, 0, 0, 'empty', colorMap, 'No Climatology Data Available', params)
                     fileName = fileName_base + '_' + spanString + '_' + 'clim'
-                    fig.savefig(fileName + '_full.png', dpi=300)
+                    profilePlot.savefig(fileName + '_full.png', dpi=300)
                     fileNameList.append(fileName + '_full.png')
-                    fig.savefig(fileName + '_local.png', dpi=300)
+                    profilePlot.savefig(fileName + '_local.png', dpi=300)
                     fileNameList.append(fileName + '_local.png')
 
     else:
-        fig, ax = setPlot()
-        profilePlot = plt.scatter(
-            scatterX, scatterY, c=scatterZ, marker='.', cmap='cmo.balance'
-        )
-        plt.annotate(
-            'No data available', xy=(0.3, 0.5), xycoords='axes fraction'
-        )
-        plt.xlim(xMin, xMax)
-        cbar = fig.colorbar(profilePlot, ax=ax)
-        cbar.update_ticks()
-        cbar.formatter.set_useOffset(False)
-        cbar.ax.set_ylabel(zLabel, fontsize=4)
-        cbar.ax.tick_params(length=2, width=0.5, labelsize=4)
+        params = {'range':'full'}
+        profilePlot = plotter(0, 0, 0, 'empty', colorMap, 'No Data Available', params)
         fileName = fileName_base + '_' + spanString + '_' + 'clim'
-        fig.savefig(fileName + '_full.png', dpi=300)
+        profilePlot.savefig(fileName + '_full.png', dpi=300)
         fileNameList.append(fileName + '_full.png')
-        fig.savefig(fileName + '_local.png', dpi=300)
+        profilePlot.savefig(fileName + '_local.png', dpi=300)
         fileNameList.append(fileName + '_local.png')
 
     return fileNameList
@@ -579,7 +567,7 @@ def plotScatter(
         plt.rcParams["font.family"] = "serif"
 
         fig, ax = plt.subplots()
-        fig.set_size_inches(4.5, 1.75)
+        fig.set_size_inches(5, 1.75)
         fig.patch.set_facecolor('white')
         plt.title(plotTitle, fontsize=4, loc='left')
         plt.ylabel(yLabel, fontsize=4)
@@ -641,13 +629,19 @@ def plotScatter(
     if scatterX.size == 0:
         print('slice is empty!')
         plt.annotate(
-            'No data available', xy=(0.3, 0.5), xycoords='axes fraction'
+            'No Data Available', xy=(0.3, 0.5), xycoords='axes fraction'
         )
         emptySlice = 'yes'
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="2%", pad=0.05)
+    for axis in ['top','bottom','left','right']:
+        cax.spines[axis].set_linewidth(0)
+    cax.set_xticks([])
+    cax.set_yticks([])
     fileName = fileName_base + '_' + spanString + '_' + 'none'
     fig.savefig(fileName + '_full.png', dpi=300)
     fileNameList.append(fileName + '_full.png')
-    plt.ylim(yMin, yMax)
+    ax.set_ylim(yMin, yMax)
     fig.savefig(fileName + '_local.png', dpi=300)
     fileNameList.append(fileName + '_local.png')
 
@@ -721,10 +715,16 @@ def plotScatter(
                 )
 
             legend = ax.legend(handles=patches, loc="upper right", fontsize=3)
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="2%", pad=0.05)
+            for axis in ['top','bottom','left','right']:
+                cax.spines[axis].set_linewidth(0)
+            cax.set_xticks([])
+            cax.set_yticks([])
             fileName = fileName_base + '_' + spanString + '_' + overlay
             fig.savefig(fileName + '_full.png', dpi=300)
             fileNameList.append(fileName + '_full.png')
-            plt.ylim(yMin, yMax)
+            ax.set_ylim(yMin, yMax)
             fig.savefig(fileName + '_local.png', dpi=300)
             fileNameList.append(fileName + '_local.png')
 
@@ -770,15 +770,20 @@ def plotScatter(
                 else:
                     print('Climatology is empty!')
                     plt.annotate(
-                        'No climatology data available',
+                        'No Climatology Data Available',
                         xy=(0.3, 0.5),
                         xycoords='axes fraction',
                     )
-
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes("right", size="2%", pad=0.05)
+                for axis in ['top','bottom','left','right']:
+                    cax.spines[axis].set_linewidth(0)
+                cax.set_xticks([])
+                cax.set_yticks([])
                 fileName = fileName_base + '_' + spanString + '_' + 'clim'
                 fig.savefig(fileName + '_full.png', dpi=300)
                 fileNameList.append(fileName + '_full.png')
-                plt.ylim(yMin, yMax)
+                ax.set_ylim(yMin, yMax)
                 fig.savefig(fileName + '_local.png', dpi=300)
                 fileNameList.append(fileName + '_local.png')
 
