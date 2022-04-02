@@ -117,11 +117,8 @@ def gridProfiles(ds,pressureName,variableName,profileIndices):
         gridY = np.arange(0, 190, 0.5) ### grid points every 0.5 meters
         gridZ = np.zeros((len(gridY),len(gridX)))
         for index, row in profileIndices.iterrows():
-            #startTime = datetime.strptime(row[start][:26], '%Y-%m-%dT%H:%M:%S.%f')
             startTime = row[start]
-            #endTime = datetime.strptime(row[end][:26], '%Y-%m-%dT%H:%M:%S.%f')
             endTime = row[end]
-            #gridX[index] = datetime.strptime(row['mid'][:26], '%Y-%m-%dT%H:%M:%S.%f')
             gridX[index] = row['peak']
             ds_sub = ds.sel(time=slice(startTime,endTime))
             if len(ds_sub) > 0: 
@@ -131,8 +128,11 @@ def gridProfiles(ds,pressureName,variableName,profileIndices):
                 else:
                     variable = ds_sub[variableName].values
                     pressure = ds_sub[pressureName].values
-                profile = np.interp(gridY,pressure,variable)
-                gridZ[:,index] = profile
+                try:
+                    profile = np.interp(gridY,pressure,variable)
+                    gridZ[:,index] = profile
+                except:
+                    gridZ[:,index] = np.nan
                 ### TODO: fill grid with nans outside of pressure values in variable
             else:
                 gridZ[:,index] = np.nan
@@ -291,6 +291,9 @@ def plotProfilesGrid(
     balanceBig = plt.get_cmap('cmo.balance', 512)
     balanceBlue = ListedColormap(balanceBig(np.linspace(0, 0.5, 256)))
 
+    unix_epoch = np.datetime64(0, 's')
+    one_second = np.timedelta64(1, 's')
+
     def plotter(Xx,Yy,Zz,plotType,colorBar,annotation,params):
 
         plt.close('all')
@@ -414,8 +417,6 @@ def plotProfilesGrid(
             yi_arr = np.arange(yMin, yMax, 1)
             xi, yi = np.meshgrid(xi_arr, yi_arr)
 
-            unix_epoch = np.datetime64(0, 's')
-            one_second = np.timedelta64(1, 's')
             scatterX_TS = [((dt64 - unix_epoch) / one_second) for dt64 in scatterX]
 
             # interpolate data to grid
@@ -439,8 +440,6 @@ def plotProfilesGrid(
                 yi_arr = np.arange(yMin, yMax, 1)
                 xi, yi = np.meshgrid(xi_arr, yi_arr)
 
-                unix_epoch = np.datetime64(0, 's')
-                one_second = np.timedelta64(1, 's')
                 scatterX_TS = [((dt64 - unix_epoch) / one_second) for dt64 in scatterX]
 
                 # interpolate data to grid
