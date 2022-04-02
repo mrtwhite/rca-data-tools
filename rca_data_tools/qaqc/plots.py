@@ -152,7 +152,7 @@ def run_dashboard_creation(
             # overlayData_near = loadNear(site)
 
             if 'PROFILER' in plotInstrument:
-                # TODO extract profiles???
+                profileList = dashboard.loadProfiles(site)
                 profile_paramMin = variable_paramDict[param]['profileMin']
                 profile_paramMax = variable_paramDict[param]['profileMax']
                 pressureParams = (
@@ -190,6 +190,7 @@ def run_dashboard_creation(
                         overlayData_near,
                         span,
                         spanString,
+                        profileList
                     )
                     plotList.append(plots)
                     depths = sites_dict[site]['depths'].strip('"').split(',')

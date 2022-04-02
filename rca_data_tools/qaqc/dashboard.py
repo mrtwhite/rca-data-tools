@@ -89,6 +89,74 @@ def extractClim(timeRef, profileDepth, overlayData_clim):
 
     return climInterpolated_hour
 
+def gridProfiles(ds,pressureName,variableName,profileIndices):
+
+    mask = (profileIndices['start'] > ds.time[0].values) & (profileIndices['end'] <= ds.time[-1].values)
+    profileIndices = profileIndices.loc[mask]
+
+    if profileIndices.empty:
+        gridX = np.zeros(1)
+        gridY = np.zeros(1)
+        gridZ = np.zeros(1)
+
+    else:
+        profileIndices = profileIndices.reset_index()
+
+        descentSamples = ['pco2_seawater','ph_seawater']
+
+        if variableName in descentSamples:
+            start = 'peak'
+            end = 'end'
+            invert = False
+        else:
+            start = 'start'
+            end = 'peak'
+            invert = True
+
+        gridX = np.zeros(len(profileIndices)).astype(datetime)
+        gridY = np.arange(0, 190, 0.5) ### grid points every 0.5 meters
+        gridZ = np.zeros((len(gridY),len(gridX)))
+        for index, row in profileIndices.iterrows():
+            #startTime = datetime.strptime(row[start][:26], '%Y-%m-%dT%H:%M:%S.%f')
+            startTime = row[start]
+            #endTime = datetime.strptime(row[end][:26], '%Y-%m-%dT%H:%M:%S.%f')
+            endTime = row[end]
+            #gridX[index] = datetime.strptime(row['mid'][:26], '%Y-%m-%dT%H:%M:%S.%f')
+            gridX[index] = row['peak']
+            ds_sub = ds.sel(time=slice(startTime,endTime))
+            if len(ds_sub) > 0: 
+                if invert:
+                    variable = np.flip(ds_sub[variableName].values)
+                    pressure = np.flip(ds_sub[pressureName].values)
+                else:
+                    variable = ds_sub[variableName].values
+                    pressure = ds_sub[pressureName].values
+                profile = np.interp(gridY,pressure,variable)
+                gridZ[:,index] = profile
+                ### TODO: fill grid with nans outside of pressure values in variable
+            else:
+                gridZ[:,index] = np.nan
+  
+    return(gridX,gridY,gridZ)
+
+    
+
+def loadProfiles(refDes):
+
+    profileList = []
+    dateColumns = ['start','peak','end']
+    (site, node, sensor1, sensor2) = refDes.split('-')
+    gh_baseURL = 'https://raw.githubusercontent.com/OOI-CabledArray/profileIndices/main/'
+    profiles_URL = gh_baseURL + site + '_profiles.csv'
+    download = requests.get(profiles_URL)
+    if download.status_code == 200:
+        profileList = pd.read_csv(io.StringIO(download.content.decode('utf-8')),parse_dates=dateColumns)
+    else:
+        logger.warning(
+            f"error retrieving profileIndices for {site}"
+        )
+    
+    return profileList
 
 def loadQARTOD(refDes, param, sensorType, logger=None):
     if logger is None:
@@ -193,12 +261,13 @@ def plotProfilesGrid(
     overlayData_near,
     span,
     spanString,
-):
+    profileList
+    ):
     ### QC check for grid...this will be replaced with a new range for "gross range"
     if 'pco2' in Yparam:
         paramData = paramData.where((paramData[Yparam] < 2000), drop=True)
-    elif 'par' in Yparam:
-        paramData = paramData.where((paramData[Yparam] > 0) & (paramData[Yparam] < 2000), drop=True)
+    #if 'par' in Yparam:
+    #    paramData = paramData.where((paramData[Yparam] > 0) & (paramData[Yparam] < 2000), drop=True)
 
     # Initiate fileName list
     fileNameList = []
@@ -338,28 +407,63 @@ def plotProfilesGrid(
         # create interpolation grid
         xMinTimestamp = xMin.timestamp()
         xMaxTimestamp = xMax.timestamp()
-        # x grid in seconds, with points every 1 hour (3600 seconds)
-        xi_arr = np.arange(xMinTimestamp, xMaxTimestamp, 10800)
-        # y grid in meters, with points every 1/2 meter
-        yi_arr = np.arange(yMin, yMax, 1)
-        xi, yi = np.meshgrid(xi_arr, yi_arr)
+        if profileList.empty:
+            # x grid in seconds, with points every 1 hour (3600 seconds)
+            xi_arr = np.arange(xMinTimestamp, xMaxTimestamp, 10800)
+            # y grid in meters, with points every 1/2 meter
+            yi_arr = np.arange(yMin, yMax, 1)
+            xi, yi = np.meshgrid(xi_arr, yi_arr)
 
-        unix_epoch = np.datetime64(0, 's')
-        one_second = np.timedelta64(1, 's')
-        scatterX_TS = [((dt64 - unix_epoch) / one_second) for dt64 in scatterX]
+            unix_epoch = np.datetime64(0, 's')
+            one_second = np.timedelta64(1, 's')
+            scatterX_TS = [((dt64 - unix_epoch) / one_second) for dt64 in scatterX]
 
-        # interpolate data to grid
-        zi = griddata(
-            (scatterX_TS, scatterY), scatterZ, (xi, yi), method='linear'
-        )
-        xiDT = xi.astype('datetime64[s]')
-        # mask out any time gaps greater than 1 day
-        timeGaps = np.where(np.diff(scatterX_TS) > 86400)
-        if len(timeGaps[0]) > 1:
-            gaps = timeGaps[0]
-            for gap in gaps:
-                gapMask = (xi > scatterX_TS[gap]) & (xi < scatterX_TS[gap + 1])
-                zi[gapMask] = np.nan
+            # interpolate data to grid
+            zi = griddata(
+                (scatterX_TS, scatterY), scatterZ, (xi, yi), method='linear'
+            )
+            xiDT = xi.astype('datetime64[s]')
+            # mask out any time gaps greater than 1 day
+            timeGaps = np.where(np.diff(scatterX_TS) > 86400)
+            if len(timeGaps[0]) > 1:
+                gaps = timeGaps[0]
+                for gap in gaps:
+                    gapMask = (xi > scatterX_TS[gap]) & (xi < scatterX_TS[gap + 1])
+                    zi[gapMask] = np.nan
+        else:
+            xi, yi, zi = gridProfiles(baseDS,pressParam,Yparam,profileList)
+            if xi.shape[0] == 1:
+                # x grid in seconds, with points every 1 hour (3600 seconds)
+                xi_arr = np.arange(xMinTimestamp, xMaxTimestamp, 10800)
+                # y grid in meters, with points every 1/2 meter
+                yi_arr = np.arange(yMin, yMax, 1)
+                xi, yi = np.meshgrid(xi_arr, yi_arr)
+
+                unix_epoch = np.datetime64(0, 's')
+                one_second = np.timedelta64(1, 's')
+                scatterX_TS = [((dt64 - unix_epoch) / one_second) for dt64 in scatterX]
+
+                # interpolate data to grid
+                zi = griddata(
+                    (scatterX_TS, scatterY), scatterZ, (xi, yi), method='linear'
+                )
+                xiDT = xi.astype('datetime64[s]')
+                # mask out any time gaps greater than 1 day
+                timeGaps = np.where(np.diff(scatterX_TS) > 86400)
+                if len(timeGaps[0]) > 1:
+                    gaps = timeGaps[0]
+                    for gap in gaps:
+                        gapMask = (xi > scatterX_TS[gap]) & (xi < scatterX_TS[gap + 1])
+                        zi[gapMask] = np.nan
+            else:
+                xiDT = xi.astype('datetime64[s]')
+                ### filter out profile columns with no data where xi == 0
+                zeroMask = np.where(xi == 0)
+                zi = np.delete(zi,zeroMask, axis=1)
+                xi = np.delete(xi,zeroMask, axis=0)
+                nanMask = np.where(np.diff(xi) > timedelta(days=1))
+                zi[:,nanMask] = np.nan
+
         # plot filled contours
         params = {'range':'full'}
         profilePlot = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
@@ -376,6 +480,7 @@ def plotProfilesGrid(
     else:
         params = {'range':'full'}
         profilePlot = plotter(0, 0, 0, 'empty', colorMap, 'No Data Available', params)
+        fileName = fileName_base + '_' + spanString + '_' + 'none'
         profilePlot.savefig(fileName + '_full.png', dpi=300)
         fileNameList.append(fileName + '_full.png')
         profilePlot.savefig(fileName + '_local.png', dpi=300)
