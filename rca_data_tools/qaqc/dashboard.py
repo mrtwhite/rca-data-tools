@@ -261,7 +261,7 @@ def plotProfilesGrid(
     overlayData_near,
     span,
     spanString,
-    profileList
+    profileList,
     ):
     ### QC check for grid...this will be replaced with a new range for "gross range"
     if 'pco2' in Yparam:
@@ -392,7 +392,7 @@ def plotProfilesGrid(
 
     endDate = timeRef
 
-    print('plotting timeSpan: ', span)
+    print('plotting grid for timeSpan: ', span)
     startDate = timeRef - timedelta(days=int(span))
     xMin = startDate - timedelta(days=int(span) * 0.002)
     xMax = endDate + timedelta(days=int(span) * 0.002)
@@ -411,6 +411,7 @@ def plotProfilesGrid(
         xMinTimestamp = xMin.timestamp()
         xMaxTimestamp = xMax.timestamp()
         if profileList.empty:
+            print('profileList empty...interpolating with old method...')
             # x grid in seconds, with points every 1 hour (3600 seconds)
             xi_arr = np.arange(xMinTimestamp, xMaxTimestamp, 10800)
             # y grid in meters, with points every 1/2 meter
@@ -434,6 +435,7 @@ def plotProfilesGrid(
         else:
             xi, yi, zi = gridProfiles(baseDS,pressParam,Yparam,profileList)
             if xi.shape[0] == 1:
+                print('error with gridding profiles...interpolating with old method...')
                 # x grid in seconds, with points every 1 hour (3600 seconds)
                 xi_arr = np.arange(xMinTimestamp, xMaxTimestamp, 10800)
                 # y grid in meters, with points every 1/2 meter
@@ -455,12 +457,17 @@ def plotProfilesGrid(
                         gapMask = (xi > scatterX_TS[gap]) & (xi < scatterX_TS[gap + 1])
                         zi[gapMask] = np.nan
             else:
+                print('success gridding profiles...')
                 xiDT = xi.astype('datetime64[s]')
                 ### filter out profile columns with no data where xi == 0
                 zeroMask = np.where(xi == 0)
                 zi = np.delete(zi,zeroMask, axis=1)
                 xi = np.delete(xi,zeroMask, axis=0)
-                nanMask = np.where(np.diff(xi) > timedelta(days=1))
+                if int(span) > 45:
+                    gapThreshold = 5
+                else:
+                    gapThreshold = 2
+                nanMask = np.where(np.diff(xi) > timedelta(days=gapThreshold))
                 zi[:,nanMask] = np.nan
 
         # plot filled contours
@@ -711,7 +718,7 @@ def plotScatter(
         return (fig, ax)
 
     endDate = timeRef
-    print('plotting timeSpan: ', span)
+    print('plotting scatter for timeSpan: ', span)
     startDate = timeRef - timedelta(days=int(span))
     xMin = startDate - timedelta(days=int(span) * 0.002)
     xMax = endDate + timedelta(days=int(span) * 0.002)
