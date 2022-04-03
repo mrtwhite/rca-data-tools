@@ -113,13 +113,14 @@ def gridProfiles(ds,pressureName,variableName,profileIndices):
             end = 'peak'
             invert = True
 
-        gridX = np.zeros(len(profileIndices)).astype(datetime)
+        #gridX = np.zeros(len(profileIndices)).astype(datetime)
+        gridX = np.zeros(len(profileIndices))
         gridY = np.arange(0, 190, 0.5) ### grid points every 0.5 meters
         gridZ = np.zeros((len(gridY),len(gridX)))
         for index, row in profileIndices.iterrows():
             startTime = row[start]
             endTime = row[end]
-            gridX[index] = row['peak']
+            gridX[index] = row['peak'].timestamp()
             ds_sub = ds.sel(time=slice(startTime,endTime))
             if len(ds_sub) > 0: 
                 if invert:
@@ -368,13 +369,16 @@ def plotProfilesGrid(
             plt.annotate(annotation, xy=(0.3, 0.5), xycoords='figure fraction')
 
         if 'clim' in plotType:
+            colorRange = params['vmax'] - params['vmin']
+            cbarticks = np.arange(params['vmin'],params['vmax'],colorRange/50)
             if 'yes' in params['norm']:
-                graph = ax.contourf(Xx, Yy, Zz, 50, cmap=colorBar,vmin=params['vmin'],
-                                vmax=params['vmax'],norm=params['norm']['divnorm'])
+                divnorm = colors.TwoSlopeNorm(
+                    vmin=params['vmin'], vcenter=0,vmax=params['vmax']
+                    )
+                graph = ax.contourf(Xx, Yy, Zz, cbarticks, cmap=colorBar,vmin=params['vmin'],
+                                vmax=params['vmax'],norm=divnorm)
             else:
-                graph = ax.contourf(Xx, Yy, Zz, 50, cmap=colorBar,vmin=params['vmin'],vmax=params['vmax'])
-            plt.clim=(params['vmin'],params['vmax'])
-            plt.clim(-maxLim, maxLim)
+                graph = ax.contourf(Xx, Yy, Zz, cbarticks, cmap=colorBar,vmin=params['vmin'],vmax=params['vmax'])
             m = ScalarMappable(cmap=graph.get_cmap())
             m.set_array(graph.get_array())
             m.set_clim(graph.get_clim())
@@ -414,7 +418,6 @@ def plotProfilesGrid(
             print('profileList empty...interpolating with old method...')
             # x grid in seconds, with points every 1 hour (3600 seconds)
             xi_arr = np.arange(xMinTimestamp, xMaxTimestamp, 10800)
-            # y grid in meters, with points every 1/2 meter
             yi_arr = np.arange(yMin, yMax, 1)
             xi, yi = np.meshgrid(xi_arr, yi_arr)
 
@@ -424,6 +427,7 @@ def plotProfilesGrid(
             zi = griddata(
                 (scatterX_TS, scatterY), scatterZ, (xi, yi), method='linear'
             )
+
             xiDT = xi.astype('datetime64[s]')
             # mask out any time gaps greater than 1 day
             timeGaps = np.where(np.diff(scatterX_TS) > 86400)
@@ -433,8 +437,10 @@ def plotProfilesGrid(
                     gapMask = (xi > scatterX_TS[gap]) & (xi < scatterX_TS[gap + 1])
                     zi[gapMask] = np.nan
         else:
-            xi, yi, zi = gridProfiles(baseDS,pressParam,Yparam,profileList)
-            if xi.shape[0] == 1:
+            xi_arr, yi_arr, zi = gridProfiles(baseDS,pressParam,Yparam,profileList)
+            xi, yi = np.meshgrid(xi_arr, yi_arr)
+
+            if xi_arr.shape[0] == 1:
                 print('error with gridding profiles...interpolating with old method...')
                 # x grid in seconds, with points every 1 hour (3600 seconds)
                 xi_arr = np.arange(xMinTimestamp, xMaxTimestamp, 10800)
@@ -458,16 +464,16 @@ def plotProfilesGrid(
                         zi[gapMask] = np.nan
             else:
                 print('success gridding profiles...')
-                xiDT = xi.astype('datetime64[s]')
                 ### filter out profile columns with no data where xi == 0
                 zeroMask = np.where(xi == 0)
                 zi = np.delete(zi,zeroMask, axis=1)
                 xi = np.delete(xi,zeroMask, axis=0)
+                xiDT = xi.astype('datetime64[s]')
                 if int(span) > 45:
                     gapThreshold = 5
                 else:
                     gapThreshold = 2
-                nanMask = np.where(np.diff(xi) > timedelta(days=gapThreshold))
+                nanMask = np.where(np.diff(xiDT) > timedelta(days=gapThreshold))
                 zi[:,nanMask] = np.nan
 
         # plot filled contours
@@ -589,14 +595,14 @@ def plotProfilesGrid(
                         colorMapLocal = 'cmo.balance'
                         divColor = 'yes'
                     if 'yes' in divColor:
-                        divnorm = colors.TwoSlopeNorm(
-                            vmin=climDiffMin, vcenter=0, vmax=climDiffMax
-                        )
+                    #    divnorm = colors.TwoSlopeNorm(
+                    #        vmin=climDiffMin, vcenter=0, vmax=climDiffMax
+                    #    )
                         # plot filled contours
                         climParams = {}
                         climParams['range'] = 'na'
                         climParams['norm'] = 'yes'
-                        climParams['norm']['divnorm'] = divnorm
+                        ###climParams['norm']['divnorm'] = divnorm
                         climParams['vmin'] = climDiffMin
                         climParams['vmax'] = climDiffMax
                         climPlot = plotter(xiDT, yi, climDiff, 'clim', 'cmo.balance', 'no', climParams)
