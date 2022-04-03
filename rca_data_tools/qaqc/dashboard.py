@@ -113,16 +113,17 @@ def gridProfiles(ds,pressureName,variableName,profileIndices):
             end = 'peak'
             invert = True
 
-        #gridX = np.zeros(len(profileIndices)).astype(datetime)
         gridX = np.zeros(len(profileIndices))
         gridY = np.arange(0, 190, 0.5) ### grid points every 0.5 meters
         gridZ = np.zeros((len(gridY),len(gridX)))
         for index, row in profileIndices.iterrows():
             startTime = row[start]
             endTime = row[end]
-            gridX[index] = row['peak'].timestamp()
+            #gridX[index] = row['peak'].timestamp()
             ds_sub = ds.sel(time=slice(startTime,endTime))
-            if len(ds_sub) > 0: 
+            if len(ds_sub['time']) > 0: 
+                gridX[index] = row['peak'].timestamp()
+                #gridX[index] = row['peak'].timestamp()
                 if invert:
                     variable = np.flip(ds_sub[variableName].values)
                     pressure = np.flip(ds_sub[pressureName].values)
@@ -134,10 +135,13 @@ def gridProfiles(ds,pressureName,variableName,profileIndices):
                     gridZ[:,index] = profile
                 except:
                     gridZ[:,index] = np.nan
+                    #print('setting gridZ to nan because interp failed...')
                 ### TODO: fill grid with nans outside of pressure values in variable
             else:
                 gridZ[:,index] = np.nan
-  
+                #print('setting gridZ to nan because timeslice was empty')
+    #print(gridZ)
+    #print(gridX)
     return(gridX,gridY,gridZ)
 
     
@@ -438,8 +442,7 @@ def plotProfilesGrid(
                     zi[gapMask] = np.nan
         else:
             xi_arr, yi_arr, zi = gridProfiles(baseDS,pressParam,Yparam,profileList)
-            xi, yi = np.meshgrid(xi_arr, yi_arr)
-
+            
             if xi_arr.shape[0] == 1:
                 print('error with gridding profiles...interpolating with old method...')
                 # x grid in seconds, with points every 1 hour (3600 seconds)
@@ -464,17 +467,20 @@ def plotProfilesGrid(
                         zi[gapMask] = np.nan
             else:
                 print('success gridding profiles...')
+                xi, yi = np.meshgrid(xi_arr, yi_arr)
                 ### filter out profile columns with no data where xi == 0
-                zeroMask = np.where(xi == 0)
+                zeroMask = np.where(xi_arr == 0)
                 zi = np.delete(zi,zeroMask, axis=1)
-                xi = np.delete(xi,zeroMask, axis=0)
+                xi = np.delete(xi,zeroMask, axis=1)
+                yi = np.delete(yi,zeroMask, axis=1)
                 xiDT = xi.astype('datetime64[s]')
                 if int(span) > 45:
                     gapThreshold = 5
                 else:
                     gapThreshold = 2
                 nanMask = np.where(np.diff(xiDT) > timedelta(days=gapThreshold))
-                zi[:,nanMask] = np.nan
+                #zi[:,nanMask] = np.nan
+                zi[nanMask] = np.nan
 
         # plot filled contours
         params = {'range':'full'}
