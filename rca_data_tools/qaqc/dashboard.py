@@ -442,7 +442,6 @@ def plotProfilesGrid(
                     zi[gapMask] = np.nan
         else:
             xi_arr, yi_arr, zi = gridProfiles(baseDS,pressParam,Yparam,profileList)
-            
             if xi_arr.shape[0] == 1:
                 print('error with gridding profiles...interpolating with old method...')
                 # x grid in seconds, with points every 1 hour (3600 seconds)
@@ -483,18 +482,28 @@ def plotProfilesGrid(
                 zi[nanMask] = np.nan
 
         # plot filled contours
-        params = {'range':'full'}
-        profilePlot = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
-        fileName = fileName_base + '_' + spanString + '_' + 'none'
-        profilePlot.savefig(fileName + '_full.png', dpi=300)
-        fileNameList.append(fileName + '_full.png')
-        params = {'range':'local'}
-        params['vmin'] = zMin
-        params['vmax'] = zMax
-        profilePlot = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
-        profilePlot.savefig(fileName + '_local.png', dpi=300)
-        fileNameList.append(fileName + '_local.png')
-        emptySlice = 'no'
+        if zi.shape[1] > 1:
+          params = {'range':'full'}
+          profilePlot = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
+          fileName = fileName_base + '_' + spanString + '_' + 'none'
+          profilePlot.savefig(fileName + '_full.png', dpi=300)
+          fileNameList.append(fileName + '_full.png')
+          params = {'range':'local'}
+          params['vmin'] = zMin
+          params['vmax'] = zMax
+          profilePlot = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
+          profilePlot.savefig(fileName + '_local.png', dpi=300)
+          fileNameList.append(fileName + '_local.png')
+          emptySlice = 'no'
+        else:
+            params = {'range':'full'}
+            profilePlot = plotter(0, 0, 0, 'empty', colorMap, 'Insufficient Profiles Found For Gridding', params)
+            fileName = fileName_base + '_' + spanString + '_' + 'none'
+            profilePlot.savefig(fileName + '_full.png', dpi=300)
+            fileNameList.append(fileName + '_full.png')
+            profilePlot.savefig(fileName + '_local.png', dpi=300)
+            fileNameList.append(fileName + '_local.png')
+            emptySlice = 'yes'
     else:
         params = {'range':'full'}
         profilePlot = plotter(0, 0, 0, 'empty', colorMap, 'No Data Available', params)
