@@ -306,6 +306,24 @@ class QAQCPipeline:
             'run_task_kwargs': {
                 'cluster': 'prefectECSCluster',
                 'launchType': 'FARGATE',
+                'tags': [
+                    {
+                        'key': 'Owner',
+                        'value': 'RCA Data Team'
+                    },
+                    {
+                        'key': 'Name',
+                        'value': 'QAQC Dashboard Pipeline'
+                    },
+                    {
+                        'key': 'Project',
+                        'value': 'Regional Cabled Array'
+                    },
+                    {
+                        'key': 'Environment',
+                        'value': 'prod'
+                    },
+                ],
             },
             'env': {
                 'GH_PAT': os.environ.get('GH_PAT', ''),
