@@ -748,6 +748,8 @@ def plotScatter(
     scatterY = np.array([])
     if len(scatterX) > 0:
         scatterY = baseDS.values
+    if ('small' in plotMarkerSize) & (len(scatterX) < 1000):
+        plotMarkerSize = 'medium'
     fig, ax = setPlot()
     emptySlice = 'no'
     if 'large' in plotMarkerSize:
