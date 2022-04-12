@@ -237,6 +237,12 @@ def loadQARTOD(refDes, param, sensorType, logger=None):
 
     return (grossRange_dict, clim_dict)
 
+def loadStatus():
+    statusResponse = requests.get("https://nereus.ooirsn.uw.edu/api/public/v1/instruments/operational-status").text
+    status = json.loads(statusResponse)
+
+    return status
+
 
 def loadData(site, sites_dict):
     fs = s3fs.S3FileSystem(anon=True)
@@ -267,6 +273,8 @@ def plotProfilesGrid(
     span,
     spanString,
     profileList,
+    statusDict,
+    site,
     ):
     ### QC check for grid...this will be replaced with a new range for "gross range"
     if 'pco2' in Yparam:
@@ -299,6 +307,18 @@ def plotProfilesGrid(
     unix_epoch = np.datetime64(0, 's')
     one_second = np.timedelta64(1, 's')
 
+    statusString = statusDict[site]
+    statusColors = {'OPERATIONAL': 'green',
+                'FAILED': 'red',
+                'TROUBLESHOOTING': 'red',
+                'OFFLINE': 'blue',
+                'UNCABLED': 'blue',
+                'DATA_QUALITY': 'red',
+                'NOT_DEPLOYED': 'blue'
+                }
+
+
+
     def plotter(Xx,Yy,Zz,plotType,colorBar,annotation,params):
 
         plt.close('all')
@@ -308,6 +328,7 @@ def plotProfilesGrid(
         fig.set_size_inches(5, 1.75)
         fig.patch.set_facecolor('white')
         plt.title(plotTitle, fontsize=4, loc='left')
+        plt.title(statusString, fontsize=4, fontweight=0, color=statusColors[statusString], loc='right', style='italic' )
         plt.ylabel('Pressure (dbar)', fontsize=4)
         ax.tick_params(direction='out', length=2, width=0.5, labelsize=4)
         ax.ticklabel_format(useOffset=False)
@@ -670,6 +691,8 @@ def plotScatter(
     plotMarkerSize,
     span,
     spanString,
+    statusDict,
+    site,
 ):
     # Initiate fileName list
     fileNameList = []
@@ -693,6 +716,17 @@ def plotScatter(
     balanceBig = plt.get_cmap('cmo.balance', 512)
     balanceBlue = ListedColormap(balanceBig(np.linspace(0, 0.5, 256)))
 
+    statusString = statusDict[site]
+    statusColors = {'OPERATIONAL': 'green',
+                'FAILED': 'red',
+                'TROUBLESHOOTING': 'red',
+                'OFFLINE': 'blue',
+                'UNCABLED': 'blue',
+                'DATA_QUALITY': 'red',
+                'NOT_DEPLOYED': 'blue'
+                }
+
+
     def setPlot():
 
         plt.close('all')
@@ -702,6 +736,7 @@ def plotScatter(
         fig.set_size_inches(5, 1.75)
         fig.patch.set_facecolor('white')
         plt.title(plotTitle, fontsize=4, loc='left')
+        plt.title(statusString, fontsize=4, fontweight=0, color=statusColors[statusString], loc='right', style='italic' )
         plt.ylabel(yLabel, fontsize=4)
         ax.tick_params(direction='out', length=2, width=0.5, labelsize=4)
         ax.ticklabel_format(useOffset=False)

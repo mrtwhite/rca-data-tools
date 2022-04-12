@@ -53,6 +53,9 @@ variable_paramDict = (
     .T.to_dict('series')
 )
 
+# load status dictionary
+statusDict = dashboard.loadStatus()
+
 plotDir = str(PLOT_DIR) + '/'
 
 
@@ -190,7 +193,9 @@ def run_dashboard_creation(
                         overlayData_near,
                         span,
                         spanString,
-                        profileList
+                        profileList,
+                        statusDict,
+                        site,
                     )
                     plotList.append(plots)
                     depths = sites_dict[site]['depths'].strip('"').split(',')
@@ -231,6 +236,8 @@ def run_dashboard_creation(
                                 'medium',
                                 span,
                                 spanString,
+                                statusDict,
+                                site,
                             )
                             plotList.append(plots)
             else:
@@ -256,6 +263,8 @@ def run_dashboard_creation(
                     'small',
                     span,
                     spanString,
+                    statusDict,
+                    site,
                 )
                 plotList.append(plots)
 
