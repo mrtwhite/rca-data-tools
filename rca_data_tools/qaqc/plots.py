@@ -24,7 +24,8 @@ selection_mapping = {'ctd-profiler': 'CTD-PROFILER',
                      'pco2-profiler': 'PCO2-PROFILER',
                      'pco2-fixed': 'PCO2-FIXED',
                      'ph-profiler': 'PH-PROFILER',
-                     'ph-fixed': 'PH-FIXED'
+                     'ph-fixed': 'PH-FIXED',
+                     'velpt-profiler': 'VELPT-PROFILER'
                      }
 span_dict = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
 # create dictionary of sites key for filePrefix, nearestNeighbors

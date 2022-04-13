@@ -34,3 +34,7 @@ RS03AXPS-PC03A-4B-PHSENA302,PH-FIXED,RS03AXPS-PC03A-4B-PHSENA302-streamed-phsen_
 RS03AXPS-SF03A-2D-PHSENA301,PH-PROFILER,RS03AXPS-SF03A-2D-PHSENA301-streamed-phsen_data_record,None,"""time,ph_seawater,int_ctd_pressure""","""010,025,050,075,100,125,150,175""","""0,200"""
 CE02SHBP-LJ01D-10-PHSEND103,PH-FIXED,CE02SHBP-LJ01D-10-PHSEND103-streamed-phsen_data_record,None,"""time,ph_seawater,int_ctd_pressure""","""010,025,050,075,100,125,150,175""","""0,200"""
 CE04OSBP-LJ01C-10-PHSEND107,PH-FIXED,CE04OSBP-LJ01C-10-PHSEND107-streamed-phsen_data_record,None,"""time,ph_seawater,int_ctd_pressure""","""010,025,050,075,100,125,150,175""","""0,200"""
+CE04OSPS-SF01B-4B-VELPTD106,VELPT-PROFILER,CE04OSPS-SF01B-4B-VELPTD106-streamed-velpt_velocity_data,None,"""time,velpt_d_eastward_velocity,velpt_d_northward_velocity,velpt_d_upward_velocity,int_ctd_pressure""","""010,025,050,075,100,125,150,175""","""0,200"""
+RS01SBPS-SF01A-4B-VELPTD102,VELPT-PROFILER,RS01SBPS-SF01A-4B-VELPTD102-streamed-velpt_velocity_data,None,"""time,velpt_d_eastward_velocity,velpt_d_northward_velocity,velpt_d_upward_velocity,int_ctd_pressure""","""010,025,050,075,100,125,150,175""","""0,200"""
+RS03AXPS-SF03A-4B-VELPTD302,VELPT-PROFILER,RS03AXPS-SF03A-4B-VELPTD302-streamed-velpt_velocity_data,None,"""time,velpt_d_eastward_velocity,velpt_d_northward_velocity,velpt_d_upward_velocity,int_ctd_pressure""","""010,025,050,075,100,125,150,175""","""0,200"""
+
