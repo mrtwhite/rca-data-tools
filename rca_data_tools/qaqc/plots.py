@@ -25,6 +25,7 @@ selection_mapping = {'ctd-profiler': 'CTD-PROFILER',
                      'pco2-fixed': 'PCO2-FIXED',
                      'ph-profiler': 'PH-PROFILER',
                      'ph-fixed': 'PH-FIXED',
+                     'spkir-profiler': 'SPKIR-PROFILER',
                      'velpt-profiler': 'VELPT-PROFILER'
                      }
 span_dict = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
@@ -54,11 +55,25 @@ variable_paramDict = (
     .T.to_dict('series')
 )
 
+# create dictionary of multi-parameter instrumet variables
+multiParameter_dict = (
+    pd.read_csv(PARAMS_DIR.joinpath('multiParameters.csv'))
+    .set_index('instrument')
+    .T.to_dict('series')
+)
+
 # load status dictionary
 statusDict = dashboard.loadStatus()
 
 plotDir = str(PLOT_DIR) + '/'
 
+def extractMulti(ds,inst,multi_dict):
+    multiParam = multi_dict[inst]['parameter']
+    subParams = multi_dict[inst]['subParameters'].strip('"').split(',')
+    for i in range(0,len(subParams)):
+        newParam = param + '_' + subParams[i]
+        ds[newParam] = ds[param][:,i]
+    return ds
 
 def map_concurrency(
     func, iterator, func_args=(), func_kwargs={}, max_workers=10
@@ -113,6 +128,10 @@ def run_dashboard_creation(
     allVar = list(siteData.keys())
     dropList = [item for item in allVar if item not in fileParams]
     siteData = siteData.drop(dropList)
+    # extract parameters from multi-dimensional array
+    if plotInstrument in multiParameter_dict.keys():
+        siteData = extractMulti(siteData, plotInstrument, multiParameter_dict)
+
     if int(span) == 365:
         if len(siteData['time']) > decimationThreshold:
             # decimate data
