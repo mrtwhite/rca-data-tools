@@ -431,19 +431,17 @@ def plotProfilesGrid(
     scatterX = baseDS.time.values
     scatterY = np.array([])
     scatterZ = np.array([])
-    if len(scatterX) > 0:
+    if len(scatterX) > 5:
         scatterY = baseDS[pressParam].values
         scatterZ = baseDS[Yparam].values
-
-    if scatterX.size != 0:
         # create interpolation grid
         xMinTimestamp = xMin.timestamp()
         xMaxTimestamp = xMax.timestamp()
         if profileList.empty:
             print('profileList empty...interpolating with old method...')
             # x grid in seconds, with points every 1 hour (3600 seconds)
-            xi_arr = np.arange(xMinTimestamp, xMaxTimestamp, 10800)
-            yi_arr = np.arange(yMin, yMax, 1)
+            xi_arr = np.arange(xMinTimestamp, xMaxTimestamp, 3600)
+            yi_arr = np.arange(yMin, yMax, 0.5)
             xi, yi = np.meshgrid(xi_arr, yi_arr)
 
             scatterX_TS = [((dt64 - unix_epoch) / one_second) for dt64 in scatterX]
@@ -466,9 +464,9 @@ def plotProfilesGrid(
             if xi_arr.shape[0] == 1:
                 print('error with gridding profiles...interpolating with old method...')
                 # x grid in seconds, with points every 1 hour (3600 seconds)
-                xi_arr = np.arange(xMinTimestamp, xMaxTimestamp, 10800)
+                xi_arr = np.arange(xMinTimestamp, xMaxTimestamp, 3600)
                 # y grid in meters, with points every 1/2 meter
-                yi_arr = np.arange(yMin, yMax, 1)
+                yi_arr = np.arange(yMin, yMax, 0.5)
                 xi, yi = np.meshgrid(xi_arr, yi_arr)
 
                 scatterX_TS = [((dt64 - unix_epoch) / one_second) for dt64 in scatterX]

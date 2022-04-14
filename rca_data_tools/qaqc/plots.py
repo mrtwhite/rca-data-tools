@@ -71,8 +71,8 @@ def extractMulti(ds,inst,multi_dict):
     multiParam = multi_dict[inst]['parameter']
     subParams = multi_dict[inst]['subParameters'].strip('"').split(',')
     for i in range(0,len(subParams)):
-        newParam = param + '_' + subParams[i]
-        ds[newParam] = ds[param][:,i]
+        newParam = multiParam + '_' + subParams[i]
+        ds[newParam] = ds[multiParam][:,i]
     return ds
 
 def map_concurrency(

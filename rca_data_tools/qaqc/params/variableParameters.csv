@@ -16,5 +16,5 @@ spectral_irradiance_555nm,-5,150,-5,150,"uW/m2/nm",thermal
 spectral_irradiance_620nm,-5,150,-5,150,"uW/m2/nm",thermal
 spectral_irradiance_683nm,-5,150,-5,150,"uW/m2/nm",thermal
 velocity_east,-2.5,2.5,-2.5,2.5,"m/s",balance
-velocity_north,-2.5,2-5,-2.5,2.5,"m/s",balance
+velocity_north,-2.5,2.5,-2.5,2.5,"m/s",balance
 velocity_up,-4,4,-4,4,"m/s",balance
