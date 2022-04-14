@@ -158,10 +158,10 @@ def run_dashboard_creation(
             # set up plotting parameters
             imageName_base = plotDir + site + '_' + param
             plotTitle = site + ' ' + param
-            paramMin = variable_paramDict[param]['min']
-            paramMax = variable_paramDict[param]['max']
-            profile_paramMin = variable_paramDict[param]['profileMin']
-            profile_paramMax = variable_paramDict[param]['profileMax']
+            paramMin = float(variable_paramDict[param]['min'])
+            paramMax = float(variable_paramDict[param]['max'])
+            profile_paramMin = float(variable_paramDict[param]['profileMin'])
+            profile_paramMax = float(variable_paramDict[param]['profileMax'])
             yLabel = variable_paramDict[param]['label']
 
             # Load overlayData
@@ -176,8 +176,6 @@ def run_dashboard_creation(
 
             if 'PROFILER' in plotInstrument:
                 profileList = dashboard.loadProfiles(site)
-                profile_paramMin = variable_paramDict[param]['profileMin']
-                profile_paramMax = variable_paramDict[param]['profileMax']
                 pressureParams = (
                     variable_dict['pressure'].strip('"').split(',')
                 )
