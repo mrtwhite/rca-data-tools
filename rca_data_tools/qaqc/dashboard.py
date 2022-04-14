@@ -782,7 +782,7 @@ def plotScatter(
     scatterX = baseDS.time.values
     scatterY = np.array([])
     if len(scatterX) > 0:
-        scatterY = baseDS[Yparam].values
+        scatterY = baseDS.values
     if ('small' in plotMarkerSize) & (len(scatterX) < 1000):
         plotMarkerSize = 'medium'
     fig, ax = setPlot()
