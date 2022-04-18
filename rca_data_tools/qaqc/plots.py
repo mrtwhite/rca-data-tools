@@ -67,13 +67,14 @@ statusDict = dashboard.loadStatus()
 
 plotDir = str(PLOT_DIR) + '/'
 
-def extractMulti(ds,inst,multi_dict):
+def extractMulti(ds,inst,multi_dict,fileParams):
     multiParam = multi_dict[inst]['parameter']
     subParams = multi_dict[inst]['subParameters'].strip('"').split(',')
     for i in range(0,len(subParams)):
         newParam = multiParam + '_' + subParams[i]
         ds[newParam] = ds[multiParam][:,i]
-    return ds
+        fileParams.append(newParam)
+    return ds,fileParams
 
 def map_concurrency(
     func, iterator, func_args=(), func_kwargs={}, max_workers=10
@@ -130,7 +131,7 @@ def run_dashboard_creation(
     siteData = siteData.drop(dropList)
     # extract parameters from multi-dimensional array
     if plotInstrument in multiParameter_dict.keys():
-        siteData = extractMulti(siteData, plotInstrument, multiParameter_dict)
+        siteData, fileParams = extractMulti(siteData, plotInstrument, multiParameter_dict,fileParams)
 
     if int(span) == 365:
         if len(siteData['time']) > decimationThreshold:
