@@ -875,7 +875,7 @@ def plotScatter(
             
             print('adding time machine plot')
             timeMachineList = []
-            if deploy in spanString:
+            if 'deploy' in spanString:
                 for time in deployTimes:
                     start = time - timedelta(days=15)
                     end = time + timedelta(days=15)
