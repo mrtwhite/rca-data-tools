@@ -887,7 +887,7 @@ def plotScatter(
                 numYears = timeRef.year - startYear
                 years = np.arange(1,numYears+1,1)
                 for year in years:
-                    time = timeRef - timedelta(days=year*365)
+                    time = timeRef - timedelta(days=int(year*365))
                     start = time - timedelta(days=int(span))
                     end = time
                     timeMachineList.append([time,start,end])
@@ -901,7 +901,7 @@ def plotScatter(
                     legendString = f'{minYear} - {maxYear}'
                 else:
                     legendString = f'{maxYear}'
-                timeDS['plotTime'] = timeDS.time + np.timedelta64(timedelta(days=365 * yearDiff))
+                timeDS['plotTime'] = timeDS.time + np.timedelta64(timedelta(days=int(365 * yearDiff)))
                 timeX = timeDS.plotTime.values
                 timeY = np.array([])
                 if len(timeX) > 0:
