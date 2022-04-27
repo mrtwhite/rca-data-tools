@@ -5,6 +5,7 @@
 
 import ast
 from datetime import datetime, timedelta
+from dateutil import parser
 import gc
 import io
 import json
@@ -750,10 +751,12 @@ def plotScatter(
         '#a6cee3',
         '#b2df8a',
         '#33a02c',
-        '#fb9a99',
-        '#e31a1c',
-        '#fdbf6f',
         '#ff7f00',
+        '#fdbf6f',
+        '#e31a1c',
+        '#fb9a99',
+        '#542c2c',
+        '#6e409c',
     ]
     balanceBig = plt.get_cmap('cmo.balance', 512)
     balanceBlue = ListedColormap(balanceBig(np.linspace(0, 0.5, 256)))
@@ -762,6 +765,8 @@ def plotScatter(
     statusColors = {'OPERATIONAL': 'green',
                 'FAILED': 'red',
                 'TROUBLESHOOTING': 'red',
+                'RECOVERED': 'blue',
+                'PARTIALLY_FUNCTIONAL': 'red',
                 'OFFLINE': 'blue',
                 'UNCABLED': 'blue',
                 'DATA_QUALITY': 'red',
@@ -871,16 +876,21 @@ def plotScatter(
     for overlay in overlays:
         if 'time' in overlay:
             fig, ax = setPlot()
-            plt.xlim(xMin, xMax)
             
             print('adding time machine plot')
             timeMachineList = []
             if 'deploy' in spanString:
+                xMinTime = parser.parse(str(deployTimes[0].year) + '-05-01')
+                xMaxTime = parser.parse(str(deployTimes[0].year) + '-10-01')
+                plt.xlim(xMinTime, xMaxTime)
+                yearRef = deployTimes[0].year
                 for time in deployTimes:
                     start = time - timedelta(days=15)
                     end = time + timedelta(days=15)
                     timeMachineList.append([time,start,end]) 
             else:
+                plt.xlim(xMin, xMax)
+                yearRef = timeRef.year
                 start = timeRef - timedelta(days=int(span))
                 timeMachineList.append([timeRef,start,timeRef])
                 startYear = pd.to_datetime(paramData['time'].values.min()).year
@@ -893,26 +903,27 @@ def plotScatter(
                     timeMachineList.append([time,start,end])
             
             for timeTrace in timeMachineList:
-                yearDiff = timeRef.year - timeTrace[0].year
-                timeDS = paramData.sel(time=slice(time[1],time[2]))
-                minYear = pd.to_datetime(timeDS['time'].values.min()).year
-                maxYear = pd.to_datetime(paramData['time'].values.max()).year
-                if minYear != maxYear:
-                    legendString = f'{minYear} - {maxYear}'
-                else:
-                    legendString = f'{maxYear}'
-                timeDS['plotTime'] = timeDS.time + np.timedelta64(timedelta(days=int(365 * yearDiff)))
-                timeX = timeDS.plotTime.values
-                timeY = np.array([])
-                if len(timeX) > 0:
-                    timeY = timeDS.values
-                c = lineColors[z]
-                if 'large' in plotMarkerSize:
-                    plt.plot(timeX, timeY,'.',markersize=2,c=c,label='%s' % legendString,)
-                elif 'medium' in plotMarkerSize:
-                    plt.plot(timeX,timeY,'.',markersize=0.75,c=c,label='%s' % legendString,)
-                elif 'small' in plotMarkerSize:
-                    plt.plot(timeX,timeY,',',c=c,label='%s' % legendString,)
+                yearDiff = int(yearRef) - int(timeTrace[0].year)
+                timeDS = paramData.sel(time=slice(timeTrace[1],timeTrace[2]))
+                if timeDS.time.size !=0:
+                    minYear = pd.to_datetime(timeDS['time'].values.min()).year
+                    maxYear = pd.to_datetime(timeDS['time'].values.max()).year
+                    if minYear != maxYear:
+                        legendString = f'{minYear} - {maxYear}'
+                    else:
+                        legendString = f'{maxYear}'
+                    timeDS['plotTime'] = timeDS.time + np.timedelta64(timedelta(days=365 * yearDiff))
+                    timeX = timeDS.plotTime.values
+                    timeY = np.array([])
+                    if len(timeX) > 0:
+                        timeY = timeDS.values
+                    c = lineColors[yearDiff]
+                    if 'large' in plotMarkerSize:
+                        plt.plot(timeX, timeY,'.',markersize=2,c=c,label='%s' % legendString,)
+                    elif 'medium' in plotMarkerSize:
+                        plt.plot(timeX,timeY,'.',markersize=0.75,c=c,label='%s' % legendString,)
+                    elif 'small' in plotMarkerSize:
+                        plt.plot(timeX,timeY,',',c=c,label='%s' % legendString,)
                 del timeDS
                 gc.collect()
 
