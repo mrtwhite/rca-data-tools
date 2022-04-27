@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+#import matplotlib
+#matplotlib.rcParams['backend'] = 'TkAgg'
+#matplotlib.use("TkAgg")
+
 import ast
 from datetime import datetime, timedelta
 import gc
@@ -89,6 +93,8 @@ def extractClim(timeRef, profileDepth, overlayData_clim):
 
     return climInterpolated_hour
 
+
+
 def gridProfiles(ds,pressureName,variableName,profileIndices):
 
     mask = (profileIndices['start'] > ds.time[0].values) & (profileIndices['end'] <= ds.time[-1].values)
@@ -145,6 +151,29 @@ def gridProfiles(ds,pressureName,variableName,profileIndices):
     return(gridX,gridY,gridZ)
 
     
+def loadDeploymentHistory(refDes):
+    deployHistory = {}
+    (site, node, sensor1, sensor2) = refDes.split('-')
+    dateColumns = ['startDateTime','stopDateTime']
+    gh_baseURL = 'https://raw.githubusercontent.com/oceanobservatories/asset-management/master/deployment/'
+    deployURL = gh_baseURL + site + '_Deploy.csv'
+    
+    download = requests.get(deployURL)
+    if download.status_code == 200:
+        df = pd.read_csv(io.StringIO(download.content.decode('utf-8')),parse_dates=dateColumns)
+        df_sort = df.sort_values(by=["Reference Designator","startDateTime"],ascending=False)
+        for i in df_sort['Reference Designator'].unique():
+            deployHistory[i] = [{'deployDate':df_sort['startDateTime'][j],'deployEnd':df_sort['stopDateTime'][j],
+                                'deployNum':df_sort['deploymentNumber'][j]} 
+                                for j in df_sort[df_sort['Reference Designator']==i].index]
+
+        
+    else:
+        logger.warning(f"error retrieving deployment history for {site}")
+
+    return deployHistory
+
+
 
 def loadProfiles(refDes):
 
@@ -254,6 +283,12 @@ def loadData(site, sites_dict):
 
     return ds
 
+def listDeployTimes(deployDict):
+    deployTimes = []
+    for deploy in deployDict:
+        deployTimes.append(deploy['deployDate'])
+        
+    return deployTimes
 
 def plotProfilesGrid(
     Yparam,
@@ -415,16 +450,25 @@ def plotProfilesGrid(
             cbar.ax.set_ylabel(zLabel, fontsize=4)
             cbar.ax.tick_params(length=2, width=0.5, labelsize=4)
         
-    
         return fig
 
-
-    endDate = timeRef
-
     print('plotting grid for timeSpan: ', span)
-    startDate = timeRef - timedelta(days=int(span))
-    xMin = startDate - timedelta(days=int(span) * 0.002)
-    xMax = endDate + timedelta(days=int(span) * 0.002)
+
+    if 'deploy' in spanString:
+        deployHistory = loadDeploymentHistory(site)
+        deployTimes = listDeployTimes(deployHistory[site])
+
+        timeRef_deploy = deployTimes[0]
+        startDate = timeRef_deploy - timedelta(days=15)
+        endDate = timeRef_deploy + timedelta(days=15)
+        xMin = startDate - timedelta(days=15 * 0.002)
+        xMax = endDate + timedelta(days=15 * 0.002)
+    else:
+        endDate = timeRef
+        startDate = timeRef - timedelta(days=int(span))
+        xMin = startDate - timedelta(days=int(span) * 0.002)
+        xMax = endDate + timedelta(days=int(span) * 0.002)
+
     baseDS = paramData.sel(time=slice(startDate, endDate))
     ### drop nans from dataset
     baseDS = baseDS.where( (baseDS[Yparam].notnull()) & (baseDS[pressParam].notnull()), drop=True)
@@ -771,11 +815,23 @@ def plotScatter(
         ax.grid(False)
         return (fig, ax)
 
-    endDate = timeRef
     print('plotting scatter for timeSpan: ', span)
-    startDate = timeRef - timedelta(days=int(span))
-    xMin = startDate - timedelta(days=int(span) * 0.002)
-    xMax = endDate + timedelta(days=int(span) * 0.002)
+
+    if 'deploy' in spanString:
+        deployHistory = loadDeploymentHistory(site)
+        deployTimes = listDeployTimes(deployHistory[site])
+
+        timeRef_deploy = deployTimes[0]
+        startDate = timeRef_deploy - timedelta(days=15)
+        endDate = timeRef_deploy + timedelta(days=15)
+        xMin = startDate - timedelta(days=15 * 0.002)
+        xMax = endDate + timedelta(days=15 * 0.002)
+    else:
+        endDate = timeRef
+        startDate = timeRef - timedelta(days=int(span))
+        xMin = startDate - timedelta(days=int(span) * 0.002)
+        xMax = endDate + timedelta(days=int(span) * 0.002)
+
     baseDS = paramData.sel(time=slice(startDate, endDate))
     scatterX = baseDS.time.values
     scatterY = np.array([])
@@ -816,52 +872,47 @@ def plotScatter(
         if 'time' in overlay:
             fig, ax = setPlot()
             plt.xlim(xMin, xMax)
-            # plot previous 6 years of data slices for timespan
+            
             print('adding time machine plot')
-            # TODO: make this a smarter iterator about how many years of data exist...
-            numYears = 6
-            traces = []
-            for z in range(0, numYears):
-                timeRef_year = timeRef - timedelta(days=z * 365)
-                time_startDate = timeRef_year - timedelta(days=int(span))
-                time_endDate = timeRef_year
-                timeDS = paramData.sel(
-                    time=slice(time_startDate, time_endDate)
-                )
-                timeDS['plotTime'] = timeDS.time + np.timedelta64(
-                    timedelta(days=365 * z)
-                )
+            timeMachineList = []
+            if deploy in spanString:
+                for time in deployTimes:
+                    start = time - timedelta(days=15)
+                    end = time + timedelta(days=15)
+                    timeMachineList.append([time,start,end]) 
+            else:
+                start = timeRef - timedelta(days=int(span))
+                timeMachineList.append([timeRef,start,timeRef])
+                startYear = pd.to_datetime(paramData['time'].values.min()).year
+                numYears = timeRef.year - startYear
+                years = np.arange(1,numYears+1,1)
+                for year in years:
+                    time = timeRef - timedelta(days=year*365)
+                    start = time - timedelta(days=int(span))
+                    end = time
+                    timeMachineList.append([time,start,end])
+            
+            for timeTrace in timeMachineList:
+                yearDiff = timeRef.year - timeTrace[0].year
+                timeDS = paramData.sel(time=slice(time[1],time[2]))
+                minYear = pd.to_datetime(timeDS['time'].values.min()).year
+                maxYear = pd.to_datetime(paramData['time'].values.max()).year
+                if minYear != maxYear:
+                    legendString = f'{minYear} - {maxYear}'
+                else:
+                    legendString = f'{maxYear}'
+                timeDS['plotTime'] = timeDS.time + np.timedelta64(timedelta(days=365 * yearDiff))
                 timeX = timeDS.plotTime.values
                 timeY = np.array([])
                 if len(timeX) > 0:
                     timeY = timeDS.values
                 c = lineColors[z]
                 if 'large' in plotMarkerSize:
-                    plt.plot(
-                        timeX,
-                        timeY,
-                        '.',
-                        markersize=2,
-                        c=c,
-                        label='%s' % str(timeRef_year.year),
-                    )
+                    plt.plot(timeX, timeY,'.',markersize=2,c=c,label='%s' % legendString,)
                 elif 'medium' in plotMarkerSize:
-                    plt.plot(
-                        timeX,
-                        timeY,
-                        '.',
-                        markersize=0.75,
-                        c=c,
-                        label='%s' % str(timeRef_year.year),
-                    )
+                    plt.plot(timeX,timeY,'.',markersize=0.75,c=c,label='%s' % legendString,)
                 elif 'small' in plotMarkerSize:
-                    plt.plot(
-                        timeX,
-                        timeY,
-                        ',',
-                        c=c,
-                        label='%s' % str(timeRef_year.year),
-                    )
+                    plt.plot(timeX,timeY,',',c=c,label='%s' % legendString,)
                 del timeDS
                 gc.collect()
 

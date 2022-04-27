@@ -28,7 +28,8 @@ selection_mapping = {'ctd-profiler': 'CTD-PROFILER',
                      'spkir-profiler': 'SPKIR-PROFILER',
                      'velpt-profiler': 'VELPT-PROFILER'
                      }
-span_dict = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
+span_dict = {'1': 'day', '7': 'week', '30': 'month', '365': 'year', '0': 'deploy'}
+
 # create dictionary of sites key for filePrefix, nearestNeighbors
 sites_dict = (
     pd.read_csv(PARAMS_DIR.joinpath('sitesDictionaryPanel.csv'))
