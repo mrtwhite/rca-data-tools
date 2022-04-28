@@ -1,5 +1,6 @@
 instrument,plotParameters
 CTD-FIXED,"""temperature,salinity,density,oxygen"""
+CTD-FIXED-XO2,"""temperature,salinity,density"""
 CTD-PROFILER,"""temperature,salinity,density,oxygen"""
 FLR-PROFILER,"""chlorophyll"""
 FLR-FIXED,"""chlorophyll"""
