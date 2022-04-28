@@ -233,14 +233,16 @@ class QAQCPipeline:
             resources = self._parse_resources()
             run_config = self.ecs_run_options(
                 cpu=resources.get('cpu', None),
-                memory=resources.get('memory', None)
+                memory=resources.get('memory', None),
             )
             return ECSRun(**run_config)
         return
 
     @staticmethod
     def _get_resource_values(resource: str) -> Dict:
-        span_configs = [sp.split('::') for sp in resource.split(',')]
+        span_configs = [
+            sp.split('::') for sp in resource.strip('"').split(',')
+        ]
         return dict(span_configs)
 
     def _parse_resources(self) -> Dict:
