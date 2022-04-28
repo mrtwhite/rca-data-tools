@@ -148,6 +148,7 @@ class QAQCPipeline:
         self.s3_bucket = s3_bucket
         self.s3_sync = s3_sync
         self.s3fs_kwargs = s3fs_kwargs
+        self._site_ds = {}
 
         self.__setup()
         self.__setup_flow()
@@ -159,8 +160,8 @@ class QAQCPipeline:
                 raise ValueError(
                     f"{self.site} is not available. Available sites {','.join(list(sites_dict.keys()))}"  # noqa
                 )
-            site_ds = sites_dict[self.site]
-            self.plotInstrument = site_ds['instrument']
+            self._site_ds = sites_dict[self.site]
+            self.plotInstrument = self._site_ds.get('instrument', None)
             if self.span not in span_dict:
                 raise ValueError(
                     f"{self.span} not valid. Must be {','.join(list(span_dict.keys()))}"  # noqa
@@ -227,7 +228,9 @@ class QAQCPipeline:
     @property
     def run_config(self):
         if self.cloud_run is True:
-            run_config = self.ecs_run_options()
+            cpu = self._site_ds.get('cpu', None)
+            memory = self._site_ds.get('memory', None)
+            run_config = self.ecs_run_options(cpu=cpu, memory=memory)
             return ECSRun(**run_config)
         return
 
