@@ -241,7 +241,7 @@ class QAQCPipeline:
     @staticmethod
     def _get_resource_values(resource: str) -> Dict:
         span_configs = [
-            sp.split('::') for sp in resource.strip('"').split(',')
+            sp.split('::') for sp in resource.split(',')
         ]
         return dict(span_configs)
 
@@ -253,13 +253,13 @@ class QAQCPipeline:
         memory_spans = {}
         instance_spans = {}
 
-        if cpu is not None:
+        if isinstance(cpu, str):
             cpu_spans = self._get_resource_values(cpu)
 
-        if memory is not None:
+        if isinstance(memory, str):
             memory_spans = self._get_resource_values(memory)
 
-        if instance is not None:
+        if isinstance(instance, str):
             instance_spans = self._get_resource_values(instance)
 
         return {
