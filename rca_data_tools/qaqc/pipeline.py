@@ -1,5 +1,6 @@
 import datetime
 import os
+from typing import Dict
 import warnings
 import argparse
 import time
@@ -228,11 +229,44 @@ class QAQCPipeline:
     @property
     def run_config(self):
         if self.cloud_run is True:
-            cpu = self._site_ds.get('cpu', None)
-            memory = self._site_ds.get('memory', None)
-            run_config = self.ecs_run_options(cpu=cpu, memory=memory)
+            # NOTE: As of 4/28/2022 instance resources is not used at this time
+            resources = self._parse_resources()
+            run_config = self.ecs_run_options(
+                cpu=resources.get('cpu', None),
+                memory=resources.get('memory', None),
+            )
             return ECSRun(**run_config)
         return
+
+    @staticmethod
+    def _get_resource_values(resource: str) -> Dict:
+        span_configs = [
+            sp.split('::') for sp in resource.split(',')
+        ]
+        return dict(span_configs)
+
+    def _parse_resources(self) -> Dict:
+        cpu = self._site_ds.get('cpu', None)
+        memory = self._site_ds.get('memory', None)
+        instance = self._site_ds.get('instance', None)
+        cpu_spans = {}
+        memory_spans = {}
+        instance_spans = {}
+
+        if isinstance(cpu, str):
+            cpu_spans = self._get_resource_values(cpu)
+
+        if isinstance(memory, str):
+            memory_spans = self._get_resource_values(memory)
+
+        if isinstance(instance, str):
+            instance_spans = self._get_resource_values(instance)
+
+        return {
+            'cpu': cpu_spans.get(self.span, None),
+            'memory': memory_spans.get(self.span, None),
+            'instance': instance_spans.get(self.span, None),
+        }
 
     def __setup_flow(self):
         self.flow = create_flow()
@@ -310,22 +344,10 @@ class QAQCPipeline:
                 'cluster': 'prefectECSCluster',
                 'launchType': 'FARGATE',
                 'tags': [
-                    {
-                        'key': 'Owner',
-                        'value': 'RCA Data Team'
-                    },
-                    {
-                        'key': 'Name',
-                        'value': 'QAQC Dashboard Pipeline'
-                    },
-                    {
-                        'key': 'Project',
-                        'value': 'Regional Cabled Array'
-                    },
-                    {
-                        'key': 'Environment',
-                        'value': 'prod'
-                    },
+                    {'key': 'Owner', 'value': 'RCA Data Team'},
+                    {'key': 'Name', 'value': 'QAQC Dashboard Pipeline'},
+                    {'key': 'Project', 'value': 'Regional Cabled Array'},
+                    {'key': 'Environment', 'value': 'prod'},
                 ],
             },
             'env': {
