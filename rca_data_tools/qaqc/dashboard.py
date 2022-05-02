@@ -327,16 +327,6 @@ def plotProfilesGrid(
     # Data Ranges
     ranges = ['full', 'local']
 
-    lineColors = [
-        '#1f78b4',
-        '#a6cee3',
-        '#b2df8a',
-        '#33a02c',
-        '#fb9a99',
-        '#e31a1c',
-        '#fdbf6f',
-        '#ff7f00',
-    ]
     balanceBig = plt.get_cmap('cmo.balance', 512)
     balanceBlue = ListedColormap(balanceBig(np.linspace(0, 0.5, 256)))
 
@@ -880,8 +870,8 @@ def plotScatter(
             print('adding time machine plot')
             timeMachineList = []
             if 'deploy' in spanString:
-                xMinTime = parser.parse(str(deployTimes[0].year) + '-05-01')
-                xMaxTime = parser.parse(str(deployTimes[0].year) + '-10-01')
+                xMinTime = parser.parse(str(deployTimes[0].year) + '-06-15')
+                xMaxTime = parser.parse(str(deployTimes[0].year) + '-09-15')
                 plt.xlim(xMinTime, xMaxTime)
                 yearRef = deployTimes[0].year
                 for time in deployTimes:
