@@ -394,6 +394,12 @@ def parse_args():
     arg_parser.add_argument('--site', type=str, default=None)
     arg_parser.add_argument('--time', type=str, default='2020-06-30')
     arg_parser.add_argument(
+        '--s3-bucket',
+        type=str,
+        default=S3_BUCKET,
+        help="S3 Bucket to store the plots.",
+    )
+    arg_parser.add_argument(
         '--span',
         type=str,
         default='7',
@@ -415,6 +421,7 @@ def main():
                 site=key,
                 cloud_run=args.cloud,
                 s3_sync=args.s3_sync,
+                s3_bucket=args.s3_bucket,
                 time=now.strftime("%Y-%m-%d"),
                 span=args.span,
                 threshold=args.threshold,
@@ -429,6 +436,7 @@ def main():
             site=args.site,
             cloud_run=args.cloud,
             s3_sync=args.s3_sync,
+            s3_bucket=args.s3_bucket,
             time=args.time,
             span=args.span,
             threshold=args.threshold,
