@@ -21,7 +21,7 @@ from rca_data_tools.qaqc.plots import (
 )
 
 HERE = Path(__file__).parent.absolute()
-S3_BUCKET = 'ooi-rca-qaqc'
+S3_BUCKET = 'ooi-rca-qaqc.net'
 PROJECT_NAME = 'rca-qaqc'
 
 
