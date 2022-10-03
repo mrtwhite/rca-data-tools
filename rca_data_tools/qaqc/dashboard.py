@@ -194,6 +194,17 @@ def loadProfiles(refDes):
     return profileList
 
 def loadQARTOD(refDes, param, sensorType, logger=None):
+
+    renameMap = {
+                 'sea_water_temperature':'seawater_temperature',
+                 'sea_water_practical_salinity':'practical_salinity',
+                 'sea_water_pressure':'seawater_pressure',
+                 'sea_water_density':'density'
+                 }
+
+    if param in renameMap:
+        param = renameMap[param]
+
     if logger is None:
         from loguru import logger
 
