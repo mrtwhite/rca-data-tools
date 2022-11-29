@@ -1,6 +1,13 @@
+# -*- coding: utf-8 -*-
+"""pipeline.py
+
+This module contains code for building and registering
+prefect 1.0 flows.
+
+"""
 import datetime
 import os
-from typing import Dict
+from typing import Dict, Tuple, Optional, Any
 import warnings
 import argparse
 import time
@@ -25,7 +32,26 @@ S3_BUCKET = 'ooi-rca-qaqc'
 PROJECT_NAME = 'rca-qaqc'
 
 
-def register_flow(flow: Flow, project_name: str = PROJECT_NAME):
+def register_flow(
+    flow: Flow, project_name: str = PROJECT_NAME
+) -> Tuple[str, str]:
+    """
+    Register flow to prefect cloud.
+
+    Parameters
+    ----------
+    x : prefect.Flow
+        Prefect flow object to be registered.
+    y : str
+        Project name where the prefect flow should be registered to.
+        Defaults to `rca-qaqc`.
+
+    Returns
+    -------
+    tuple
+        (flow name, project name)
+
+    """
     ready = False
     while not ready:
         # Keep trying to avoid docker registry interruptions
@@ -42,6 +68,9 @@ def register_flow(flow: Flow, project_name: str = PROJECT_NAME):
 
 @task
 def dashboard_creation_task(site, timeString, span, threshold, logger):
+    """
+    Prefect task for running dashboard creation
+    """
     site_ds = sites_dict[site]
     plotInstrument = site_ds['instrument']
     paramList = (
@@ -70,6 +99,9 @@ def dashboard_creation_task(site, timeString, span, threshold, logger):
 def organize_pngs_task(
     plotList=[], fs_kwargs={}, sync_to_s3=False, s3_bucket=S3_BUCKET
 ):
+    """
+    Prefect task for organizing the plot pngs to their appropriate directories
+    """
     if len(plotList) > 0:
         organize_pngs(
             sync_to_s3=sync_to_s3, fs_kwargs=fs_kwargs, bucket_name=s3_bucket
@@ -79,8 +111,33 @@ def organize_pngs_task(
 
 
 def create_flow(
-    name="create_dashboard", storage=None, run_config=None, schedule=None
+    name: str = "create_dashboard",
+    storage: Optional[Docker] = None,
+    run_config: Optional[ECSRun] = None,
+    schedule: Optional[Any] = None,
 ):
+    """
+    Create prefect flow for plot creation tasks.
+
+    Parameters
+    ----------
+    name : str
+        The name of the prefect flow.
+    storage : prefect.storage.Docker, optional
+        Prefect storage where the flow and tasks code should be stored.
+    run_config: prefect.storage.ECSRun, optional
+        Prefect run configurations.
+    schedule: optional
+        Prefect schedule.
+        **Note: Currently not used**
+
+    Returns
+    -------
+    prefect.Flow
+        Prefect flow objects with specified name,
+        storage, run configs, and schedule.
+
+    """
     now = datetime.datetime.utcnow()
     # TODO: Add schedule so it can cron away!
     with Flow(
@@ -108,6 +165,7 @@ def create_flow(
             's3_bucket', default=S3_BUCKET, required=False
         )
 
+        # Run dashboard creation task
         plotList = dashboard_creation_task(
             site=site_param,
             timeString=timeString_param,
@@ -115,6 +173,8 @@ def create_flow(
             threshold=threshold_param,
             logger=logger_param,
         )
+
+        # Run organize pngs task
         organize_pngs_task(
             plotList=plotList,
             sync_to_s3=sync_to_s3_param,
@@ -125,6 +185,11 @@ def create_flow(
 
 
 class QAQCPipeline:
+    """
+    QAQC Pipeline Class to create Pipeline for specified site, time, and span.
+
+
+    """
     __dockerfile_path = HERE / "docker" / "Dockerfile"
     __prefect_directory = "/home/jovyan/prefect"
 
@@ -185,6 +250,9 @@ class QAQCPipeline:
 
     @property
     def parameters(self):
+        """
+        OOI plot parameters
+        """
         return (
             instrument_dict[self.plotInstrument]['plotParameters']
             .replace('"', '')
@@ -193,6 +261,9 @@ class QAQCPipeline:
 
     @property
     def flow_parameters(self):
+        """
+        Prefect flow parameters
+        """
         return {
             'site': self.site,
             'timeString': self.time,
@@ -205,6 +276,9 @@ class QAQCPipeline:
 
     @property
     def image_info(self):
+        """
+        Docker Image Info
+        """
         tag = f"{self.created_dt:%Y%m%dT%H%M}"
         registry = "cormorack"
         repo = "qaqc-dashboard"
@@ -217,10 +291,16 @@ class QAQCPipeline:
 
     @property
     def dockerfile(self):
+        """
+        Dockerfile content
+        """
         return self.__dockerfile_path.read_text(encoding='utf-8')
 
     @property
     def storage(self):
+        """
+        Docker Storage Option
+        """
         if self.cloud_run is True:
             storage_options = self.docker_storage_options()
             return Docker(**storage_options)
@@ -228,6 +308,9 @@ class QAQCPipeline:
 
     @property
     def run_config(self):
+        """
+        ECS Run Configuration
+        """
         if self.cloud_run is True:
             # NOTE: As of 4/28/2022 instance resources is not used at this time
             resources = self._parse_resources()
@@ -240,9 +323,7 @@ class QAQCPipeline:
 
     @staticmethod
     def _get_resource_values(resource: str) -> Dict:
-        span_configs = [
-            sp.split('::') for sp in resource.split(',')
-        ]
+        span_configs = [sp.split('::') for sp in resource.split(',')]
         return dict(span_configs)
 
     def _parse_resources(self) -> Dict:
@@ -274,6 +355,9 @@ class QAQCPipeline:
         self.flow.run_config = self.run_config
 
     def run(self, parameters=None):
+        """
+        Runs the flow either in the cloud or locally.
+        """
         if self.site is None:
             raise ValueError("No site found. Please provide site.")
         if parameters is None:
@@ -299,7 +383,10 @@ class QAQCPipeline:
         prefect_directory=None,
         python_dependencies=None,
         **kwargs,
-    ):
+    ) -> Dict[str, Any]:
+        """
+        Create default docker storage options dictionary
+        """
         default_dependencies = [
             'git+https://github.com/OOI-CabledArray/rca-data-tools.git@main'
         ]
@@ -335,7 +422,10 @@ class QAQCPipeline:
         execution_role_arn=None,
         env=None,
         **kwargs,
-    ):
+    ) -> Dict[str, Any]:
+        """
+        Create default ecs run configuration options dictionary
+        """
         defaults = {
             'cpu': '4 vcpu',
             'memory': '30 GB',
@@ -415,6 +505,9 @@ def main():
 
     args = parse_args()
     if args.all is True:
+        # Creates pipeline objects for all the sites
+        # if run is specified, will actually run the pipeline
+        # in prefect cloud.
         now = datetime.datetime.utcnow()
         for key in sites_dict.keys():
             pipeline = QAQCPipeline(
@@ -432,6 +525,8 @@ def main():
             # Add 10s delay for each run
             time.sleep(10)
     else:
+        # Creates only one pipeline
+        # This is used for registration or testing only
         pipeline = QAQCPipeline(
             site=args.site,
             cloud_run=args.cloud,

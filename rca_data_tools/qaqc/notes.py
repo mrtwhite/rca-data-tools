@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+"""notes.py
+
+This module contains code for reading HITL notes from
+google spreadsheet and converting them to a set of
+csv files to be displayed in the QAQC Dashboard.
+
+"""
+
 import os
 from datetime import datetime
 import argparse

@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+"""dashboard.py
+
+This module contains code for creating pngs to feed into the QAQC dashboard.
+
+"""
+
 #import matplotlib
 #matplotlib.rcParams['backend'] = 'TkAgg'
 #matplotlib.use("TkAgg")

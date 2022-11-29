@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""index.py
+
+This module contains code for creating json index files,
+for the contents of directories that hold plot pngs and HITL
+csv files. These index files are utilized for the QAQC dashboard
+frontend application.
+
+"""
+
 import argparse
 import json
 import fsspec

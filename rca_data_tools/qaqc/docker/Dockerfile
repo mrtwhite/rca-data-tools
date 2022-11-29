@@ -1,3 +1,8 @@
+# Dockerfile for building prefect pipeline
+# this file will be used when the pipeline image is being built
+# it is based on the `pangeo-notebook` image,
+# which contains a lot of data science packages
+
 FROM pangeo/pangeo-notebook
 USER root
 ENV DEBIAN_FRONTEND=noninteractive

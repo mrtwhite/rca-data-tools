@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""plots.py
+
+This module contains code for plot creations from various instruments.
+
+"""
+
 import argparse
 import concurrent.futures
 from datetime import datetime
