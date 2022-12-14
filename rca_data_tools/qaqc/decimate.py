@@ -11,152 +11,200 @@ import math
 import numba
 import numpy as np
 import pandas as pd
+from typing import Callable, Optional
+import logging
+import xarray as xr
 
 from functools import reduce
 
 
 @numba.njit
-def execute_decimation(threshold, every, data, sampled, time_array, a):
-    for i in range(0, threshold - 2):
-        # Calculate point average for next bucket (containing c)
-        avg_x = 0
-        avg_y = 0
-        avg_range_start = int(math.floor((i + 1) * every) + 1)
-        avg_range_end = int(math.floor((i + 2) * every) + 1)
-        avg_rang_end = (
-            avg_range_end if avg_range_end < len(data) else len(data)
-        )
+def split_data(data: np.ndarray, n_bins: int) -> np.ndarray:
+    """
+    Splits the data by the number of bins
 
-        avg_range_length = avg_rang_end - avg_range_start
+    Parameters
+    ----------
+    data : np.ndarray
+        The data to be split
+    n_bins : int
+        The number of bins the data should be divided into
 
-        while avg_range_start < avg_rang_end:
-            avg_x += data[avg_range_start][0]
-            avg_y += data[avg_range_start][1]
-            avg_range_start += 1
+    Returns
+    -------
+    np.ndarray
+        The split data arrays
+    """
+    return np.array_split(data[1 : len(data) - 1], n_bins)
 
-        avg_x /= avg_range_length
-        avg_y /= avg_range_length
 
-        # Get the range for this bucket
-        range_offs = int(math.floor((i + 0) * every) + 1)
-        range_to = int(math.floor((i + 1) * every) + 1)
+@numba.njit
+def _np_apply_along_axis(
+    func1d: Callable, axis: int, arr: np.ndarray
+) -> np.ndarray:
+    assert arr.ndim == 2
+    assert axis in [0, 1]
+    if axis == 0:
+        result = np.empty(arr.shape[1])
+        for i in range(len(result)):
+            result[i] = func1d(arr[:, i])
+    else:
+        result = np.empty(arr.shape[0])
+        for i in range(len(result)):
+            result[i] = func1d(arr[i, :])
+    return result
+
+
+@numba.njit
+def np_mean(array: np.ndarray, axis: int) -> np.ndarray:
+    """Simple numpy mean re-creation for numba"""
+    return _np_apply_along_axis(np.mean, axis, array)
+
+
+@numba.njit
+def np_median(array: np.ndarray, axis: int) -> np.ndarray:
+    """Simple numpy median re-creation for numba"""
+    return _np_apply_along_axis(np.median, axis, array)
+
+
+@numba.njit
+def _areas_of_triangles(a: np.ndarray, bs: np.ndarray, c: np.ndarray):
+    """Calculate areas of triangles from duples of vertex coordinates.
+
+    Uses implicit numpy broadcasting along first axis of ``bs``.
+
+    Parameters
+    ----------
+    a : np.ndarray
+        Point a
+    bs : np.ndarray
+        Current data bin
+    c : np.ndarray
+        The mean of the next bin
+    Returns
+    -------
+    numpy.array
+        Array of areas of shape (len(bs),)
+    """
+    bs_minus_a = bs - a
+    a_minus_bs = a - bs
+    return 0.5 * np.absolute(
+        (a[0] - c[0]) * (bs_minus_a[:, 1]) - (a_minus_bs[:, 0]) * (c[1] - a[1])
+    )
+
+
+@numba.njit
+def _largest_triangle_three_buckets(
+    data: np.ndarray, threshold: int
+) -> np.array:
+    """
+    Return a downsampled version of data.
+    Original code found at https://github.com/devoxi/lttb-py.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        Original data that will be decimated.
+        Must be a numpy array or list of lists.
+        Data must be formatted this way: [[x,y], [x,y], [x,y], ...]
+    threshold : int
+        threshold must be >= 2 and <= to the len of data.
+    Returns
+    -------
+    numpy.ndarray
+        Decimated data.
+    """
+    n_bins = threshold - 2
+
+    # Prepare output array
+    # First and last points are the same as in the input.
+    out = np.zeros((threshold, 2))
+    out[0] = data[0]
+    out[len(out) - 1] = data[len(data) - 1]
+
+    data_bins = split_data(data, n_bins)
+
+    # Largest Triangle Three Buckets (LTTB):
+    # In each bin, find the point that makes the largest triangle
+    # with the point saved in the previous bin
+    # and the centroid of the points in the next bin.
+    for i in range(len(data_bins)):
+        this_bin = data_bins[i]
+        if i < n_bins - 1:
+            next_bin = data_bins[i + 1]
+        else:
+            next_bin = data[len(data) - 1 :]
+
+        a = out[i]
+        bs = this_bin
+        c = np_mean(next_bin, 0)
+        areas = _areas_of_triangles(a, bs, c)
 
         # Get middle of bucket
-        bucket_middle = math.floor(
-            np.median(np.array([j for j in range(range_offs, range_to + 1)]))
-        )
+        middle = bs[math.floor(bs.shape[0] / 2)]
+        point = bs[np.argmax(areas)]
 
-        time_array.append(data[bucket_middle][0])
-        # Point a
-        point_ax = data[a][0]
-        point_ay = data[a][1]
-
-        max_area = -1
-
-        while range_offs < range_to:
-            # Calculate triangle area over three buckets
-            area = (
-                math.fabs(
-                    (point_ax - avg_x) * (data[range_offs][1] - point_ay)
-                    - (point_ax - data[range_offs][0]) * (avg_y - point_ay)
-                )
-                * 0.5
-            )
-
-            if area > max_area:
-                max_area = area
-                max_area_point = data[range_offs]
-                next_a = range_offs  # Next a is this b
-            range_offs += 1
-        sampled.append(max_area_point[1])  # Pick this point from the bucket
-        a = next_a  # This a is the next a (chosen b)
-
-    return sampled, time_array
+        out[i + 1] = np.array([middle[0], point[1]])
+    return out
 
 
 class LttbException(Exception):
     pass
 
 
-def largest_triangle_three_buckets(data, threshold):
-    """
-    Return a downsampled version of data.
-    Original code found at https://github.com/devoxi/lttb-py.
-
-    Args:
-        data: Original data that will be decimated.
-              Must be a numpy array or list of lists.
-              Data must be formatted this way: [[x,y], [x,y], [x,y], ...]
-        threshold (int): threshold must be >= 2 and <= to the len of data.
-    Returns:
-        numpy.array: Decimated data.
-    """
-
-    # --- Initial checks ---
-    #     if not isinstance(data, (list, np.ndarray)):
-    #         raise LttbException("data is not a list or numpy array")
-    #     if not isinstance(threshold, int) or threshold <= 2 or threshold >= len(data):
-    #         raise LttbException("threshold not well defined")
-    #     for i in data:
-    #         if not isinstance(i, (list, np.ndarray)) or len(i) != 2:
-    #             raise LttbException("datapoints are not lists or numpy array")
-
-    try:
-        data = data.compute()
-        # Bucket size. Leave room for start and end data points
-        every = (len(data) - 2) / (threshold - 2)
-
-        a = 0  # Initially a is the first point in the triangle
-
-        # Always add the first point
-        sampled = [data[0][1]]
-        time_array = [data[0][0]]
-
-        # --- Perform Decimation ---
-        sampled, time_array = execute_decimation(
-            threshold, every, data, sampled, time_array, a
-        )
-
-        # Always add the last point
-        sampled.append(data[len(data) - 1][1])
-        time_array.append(data[len(data) - 1][0])
-
-        decimated_data = np.array(list(zip(time_array, sampled)))
-
-        return decimated_data
-    except Exception as e:
-        raise LttbException(e)
-
-
-def perform_decimation(ds, threshold):
+def _perform_decimation(ds, threshold):
     time_da = ds.time.astype(int)
     cols = [time_da.name, ds.name]
-    da_data = dask.array.stack([time_da.data, ds.data], axis=1)
-    decdata = largest_triangle_three_buckets(da_data, threshold)
-    # client.cancel(da_data)
+    data = dask.array.stack([time_da.data, ds.data], axis=1).compute()
+    try:
+        decdata = _largest_triangle_three_buckets(data, threshold)
+    except Exception as e:
+        raise LttbException(e)
     del ds
     gc.collect()
     return pd.DataFrame(decdata, columns=cols)
 
 
-def downsample(raw_ds, threshold, logger=None):
+def downsample(
+    raw_ds: xr.Dataset,
+    threshold: int,
+    logger: Optional[logging.Logger] = None,
+) -> pd.DataFrame:
+    """
+    Performs downsampling on the dataset.
+
+    Parameters
+    ----------
+    raw_ds : xr.Dataset
+        The dataset to be decimated.
+    threshold : int
+        The threshold for decimation,
+        total number of data points at the end.
+    logger : logging.Logger
+        Logger instance to be used for logging
+
+    Returns
+    -------
+    pd.DataFrame
+        The decimated data as pandas dataframe.
+    """
     if logger is None:
         from loguru import logger
 
-    logger.debug("Get list of data arrays")
+    logger.info("Get list of data arrays")
     da_list = (raw_ds[var] for var in raw_ds)
 
     df_list = []
     for da in da_list:
-        logger.debug(f"Executing decimation for {da.name}")
-        decdf = perform_decimation(da, threshold)
+        logger.info(f"Executing decimation for {da.name}")
+        decdf = _perform_decimation(da, threshold)
         df_list.append(decdf)
 
         del decdf
         gc.collect()
-    logger.debug("Decimation process completed.")
+    logger.info("Decimation process completed.")
 
-    logger.debug("Creating decimated dataframe.")
+    logger.info("Creating decimated dataframe.")
     final_df = reduce(
         lambda left, right: pd.merge(left, right, on="time"), df_list
     )

@@ -21,22 +21,29 @@ HERE = Path(__file__).parent.absolute()
 PARAMS_DIR = HERE.joinpath('params')
 PLOT_DIR = Path('QAQC_plots')
 
-selection_mapping = {'ctd-profiler': 'CTD-PROFILER', 
-                     'ctd-fixed': 'CTD-FIXED',
-                     'ctd-fixed-xo2': 'CTD-FIXED-XO2',
-                     'flr-profiler': 'FLR-PROFILER',
-                     'flr-fixed': 'FLR-FIXED',
-                     'nut-profiler': 'NUT-PROFILER',
-                     'nut-fixed': 'NUT-FIXED',
-                     'par-profiler': 'PAR-PROFILER',
-                     'pco2-profiler': 'PCO2-PROFILER',
-                     'pco2-fixed': 'PCO2-FIXED',
-                     'ph-profiler': 'PH-PROFILER',
-                     'ph-fixed': 'PH-FIXED',
-                     'spkir-profiler': 'SPKIR-PROFILER',
-                     'velpt-profiler': 'VELPT-PROFILER'
-                     }
-span_dict = {'1': 'day', '7': 'week', '30': 'month', '365': 'year', '0': 'deploy'}
+selection_mapping = {
+    'ctd-profiler': 'CTD-PROFILER',
+    'ctd-fixed': 'CTD-FIXED',
+    'ctd-fixed-xo2': 'CTD-FIXED-XO2',
+    'flr-profiler': 'FLR-PROFILER',
+    'flr-fixed': 'FLR-FIXED',
+    'nut-profiler': 'NUT-PROFILER',
+    'nut-fixed': 'NUT-FIXED',
+    'par-profiler': 'PAR-PROFILER',
+    'pco2-profiler': 'PCO2-PROFILER',
+    'pco2-fixed': 'PCO2-FIXED',
+    'ph-profiler': 'PH-PROFILER',
+    'ph-fixed': 'PH-FIXED',
+    'spkir-profiler': 'SPKIR-PROFILER',
+    'velpt-profiler': 'VELPT-PROFILER',
+}
+span_dict = {
+    '1': 'day',
+    '7': 'week',
+    '30': 'month',
+    '365': 'year',
+    '0': 'deploy',
+}
 
 # create dictionary of sites key for filePrefix, nearestNeighbors
 sites_dict = (
@@ -76,14 +83,16 @@ statusDict = dashboard.loadStatus()
 
 plotDir = str(PLOT_DIR) + '/'
 
-def extractMulti(ds,inst,multi_dict,fileParams):
+
+def extractMulti(ds, inst, multi_dict, fileParams):
     multiParam = multi_dict[inst]['parameter']
     subParams = multi_dict[inst]['subParameters'].strip('"').split(',')
-    for i in range(0,len(subParams)):
+    for i in range(0, len(subParams)):
         newParam = multiParam + '_' + subParams[i]
-        ds[newParam] = ds[multiParam][:,i]
+        ds[newParam] = ds[multiParam][:, i]
         fileParams.append(newParam)
-    return ds,fileParams
+    return ds, fileParams
+
 
 def map_concurrency(
     func, iterator, func_args=(), func_kwargs={}, max_workers=10
@@ -129,7 +138,7 @@ def run_dashboard_creation(
     plotList = []
     logger.info(f"site: {site}")
     logger.info(f"span: {span}")
-    
+
     spanString = span_dict[span]
     # load data for site
     siteData = dashboard.loadData(site, sites_dict)
@@ -140,7 +149,9 @@ def run_dashboard_creation(
     siteData = siteData.drop(dropList)
     # extract parameters from multi-dimensional array
     if plotInstrument in multiParameter_dict.keys():
-        siteData, fileParams = extractMulti(siteData, plotInstrument, multiParameter_dict,fileParams)
+        siteData, fileParams = extractMulti(
+            siteData, plotInstrument, multiParameter_dict, fileParams
+        )
 
     if int(span) == 365:
         if len(siteData['time']) > decimationThreshold:
@@ -394,17 +405,18 @@ def main():
     now = datetime.utcnow()
     logger.info(f"======= Creation started at: {now.isoformat()} ======")
     for site in dataList:
-        run_dashboard_creation(
-            site,
-            paramList,
-            timeRef,
-            plotInstrument,
-            args.span,
-            args.threshold,
-            logger=logger,
-        )
-        # Organize pngs into folders
-        organize_pngs()
+        if site == "CE02SHBP-LJ01D-06-CTDBPN106":
+            run_dashboard_creation(
+                site,
+                paramList,
+                timeRef,
+                plotInstrument,
+                args.span,
+                args.threshold,
+                logger=logger,
+            )
+            # Organize pngs into folders
+            organize_pngs()
 
     end = datetime.utcnow()
     logger.info(
@@ -414,4 +426,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
