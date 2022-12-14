@@ -405,18 +405,17 @@ def main():
     now = datetime.utcnow()
     logger.info(f"======= Creation started at: {now.isoformat()} ======")
     for site in dataList:
-        if site == "CE02SHBP-LJ01D-06-CTDBPN106":
-            run_dashboard_creation(
-                site,
-                paramList,
-                timeRef,
-                plotInstrument,
-                args.span,
-                args.threshold,
-                logger=logger,
-            )
-            # Organize pngs into folders
-            organize_pngs()
+        run_dashboard_creation(
+            site,
+            paramList,
+            timeRef,
+            plotInstrument,
+            args.span,
+            args.threshold,
+            logger=logger,
+        )
+        # Organize pngs into folders
+        organize_pngs()
 
     end = datetime.utcnow()
     logger.info(
