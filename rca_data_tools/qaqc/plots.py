@@ -47,7 +47,7 @@ span_dict = {
 
 # create dictionary of sites key for filePrefix, nearestNeighbors
 sites_dict = (
-    pd.read_csv(PARAMS_DIR.joinpath('sitesDictionaryPanel.csv'))
+    pd.read_csv(PARAMS_DIR.joinpath('sitesDictionary.csv'))
     .set_index('refDes')
     .T.to_dict('series')
 )
