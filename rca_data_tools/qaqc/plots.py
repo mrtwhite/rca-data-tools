@@ -6,6 +6,7 @@ This module contains code for plot creations from various instruments.
 """
 
 import argparse
+from ast import literal_eval
 import concurrent.futures
 from datetime import datetime
 from dateutil import parser
@@ -75,6 +76,13 @@ variable_paramDict = (
 multiParameter_dict = (
     pd.read_csv(PARAMS_DIR.joinpath('multiParameters.csv'))
     .set_index('instrument')
+    .T.to_dict('series')
+)
+
+# create dictionary of local parameter ranges for each site
+localRange_dict = (
+    pd.read_csv(PARAMS_DIR.joinpath('localRanges.csv'))
+    .set_index('refDes')
     .T.to_dict('series')
 )
 
@@ -183,6 +191,22 @@ def run_dashboard_creation(
             paramMax = float(variable_paramDict[param]['max'])
             profile_paramMin = float(variable_paramDict[param]['profileMin'])
             profile_paramMax = float(variable_paramDict[param]['profileMax'])
+            localRanges = str(localRange_dict[site][param])
+            if not 'nan' in localRanges:
+                localRange = literal_eval(loadRanges)
+                if 'local' in localRange:
+                    paramMin_local = localRange['local'][0]
+                    paramMax_local = localRange['local'][1]
+                else:
+                    paramMin_local = paramMin
+                    paramMax_local = paramMax
+                if 'local_profile' in localRange:
+                    profile_paramMin_local = localRange['local_profile'][0]
+                    profile_paramMax_local = localRagne['local_profile'][1]
+                else:
+                    profile_paramMin_local = profile_paramMin
+                    profile_paramMax_local = profile_paramMax
+
             yLabel = variable_paramDict[param]['label']
 
             # Load overlayData
@@ -226,6 +250,8 @@ def run_dashboard_creation(
                         yMax,
                         profile_paramMin,
                         profile_paramMax,
+                        profile_paramMin_local,
+                        profile_paramMax_local,
                         colorMap,
                         imageName_base,
                         overlayData_clim,
@@ -269,6 +295,8 @@ def run_dashboard_creation(
                                 timeRef,
                                 profile_paramMin,
                                 profile_paramMax,
+                                profile_paramMin_local,
+                                profile_paramMax_local,
                                 imageName_base_depth,
                                 overlayData_clim_extract,
                                 overlayData_near,
@@ -296,6 +324,8 @@ def run_dashboard_creation(
                     timeRef,
                     paramMin,
                     paramMax,
+                    paramMin_local,
+                    paramMax_local,
                     imageName_base,
                     overlayData_clim_extract,
                     overlayData_near,

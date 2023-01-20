@@ -320,6 +320,8 @@ def plotProfilesGrid(
     yMax,
     zMin,
     zMax,
+    zMin_local,
+    zMax_local,
     colorMap,
     fileName_base,
     overlayData_clim,
@@ -343,7 +345,7 @@ def plotProfilesGrid(
     overlays = ['clim', 'near', 'time', 'none']
 
     # Data Ranges
-    ranges = ['full', 'standard']
+    ranges = ['full', 'standard', 'local']
 
     balanceBig = plt.get_cmap('cmo.balance', 512)
     balanceBlue = ListedColormap(balanceBig(np.linspace(0, 0.5, 256)))
@@ -411,12 +413,12 @@ def plotProfilesGrid(
         plt.xlim(xMin, xMax)
     
         if 'contour' in plotType:
-            if 'standard' in params['range']:
+            if 'full' in params['range']:
+                graph = ax.contourf(Xx, Yy, Zz, 50, cmap=colorBar)
+            else:
                 colorRange = params['vmax'] - params['vmin']
                 cbarticks = np.arange(params['vmin'],params['vmax'],colorRange/50)
                 graph = ax.contourf(Xx, Yy, Zz, cbarticks, cmap=colorBar)
-            else:
-                graph = ax.contourf(Xx, Yy, Zz, 50, cmap=colorBar)
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="2%", pad=0.05)
             cbar = plt.colorbar(graph, cax=cax)
@@ -566,6 +568,12 @@ def plotProfilesGrid(
           profilePlot = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
           profilePlot.savefig(fileName + '_standard.png', dpi=300)
           fileNameList.append(fileName + '_standard.png')
+          params = {'range':'local'}
+          params['vmin'] = zMin_local
+          params['vmax'] = zMax_local
+          profilePlot = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
+          profilePlot.savefig(fileName + '_local.png', dpi=300)
+          fileNameList.append(fileName + '_local.png')
           emptySlice = 'no'
         else:
             params = {'range':'full'}
@@ -575,6 +583,8 @@ def plotProfilesGrid(
             fileNameList.append(fileName + '_full.png')
             profilePlot.savefig(fileName + '_standard.png', dpi=300)
             fileNameList.append(fileName + '_standard.png')
+            profilePlot.savefig(fileName + '_local.png', dpi=300)
+            fileNameList.append(fileName + '_local.png')
             emptySlice = 'yes'
     else:
         params = {'range':'full'}
@@ -584,6 +594,8 @@ def plotProfilesGrid(
         fileNameList.append(fileName + '_full.png')
         profilePlot.savefig(fileName + '_standard.png', dpi=300)
         fileNameList.append(fileName + '_standard.png')
+        profilePlot.savefig(fileName + '_local.png', dpi=300)
+        fileNameList.append(fileName + '_local.png')
         emptySlice = 'yes'
 
     if 'no' in emptySlice:
@@ -692,7 +704,7 @@ def plotProfilesGrid(
                         ###climParams['norm']['divnorm'] = divnorm
                         climParams['vmin'] = climDiffMin
                         climParams['vmax'] = climDiffMax
-                        climPlot = plotter(xiDT, yi, climDiff, 'clim', 'cmo.balance', 'no', climParams)
+                        climPlot = plotter(xiDT, yi, climDiff, 'clim', colorMapStandard, 'no', climParams)
   
                     else:
                         # plot filled contours
@@ -701,10 +713,12 @@ def plotProfilesGrid(
                         climParams['norm'] = 'no'
                         climParams['vmin'] = climDiffMin
                         climParams['vmax'] = climDiffMax
-                        climPlot = plotter(xiDT, yi, climDiff, 'clim', 'cmo.balance', 'no', climParams)
+                        climPlot = plotter(xiDT, yi, climDiff, 'clim', colorMapStandard, 'no', climParams)
 
                     climPlot.savefig(fileName + '_standard.png', dpi=300)
                     fileNameList.append(fileName + '_standard.png')
+                    climPlot.savefig(fileName + '_local.png', dpi=300)
+                    fileNameList.append(fileName + '_local.png')
 
                 else:
                     print('climatology is empty!')
@@ -715,6 +729,9 @@ def plotProfilesGrid(
                     fileNameList.append(fileName + '_full.png')
                     profilePlot.savefig(fileName + '_standard.png', dpi=300)
                     fileNameList.append(fileName + '_standard.png')
+                    profilePlot.savefig(fileName + '_local.png', dpi=300)
+                    fileNameList.append(fileName + '_local.png')
+
 
     else:
         params = {'range':'full'}
@@ -724,6 +741,8 @@ def plotProfilesGrid(
         fileNameList.append(fileName + '_full.png')
         profilePlot.savefig(fileName + '_standard.png', dpi=300)
         fileNameList.append(fileName + '_standard.png')
+        profilePlot.savefig(fileName + '_local.png', dpi=300)
+        fileNameList.append(fileName + '_local.png')
 
     return fileNameList
 
@@ -736,6 +755,8 @@ def plotScatter(
     timeRef,
     yMin,
     yMax,
+    yMin_local,
+    yMax_local,
     fileName_base,
     overlayData_clim,
     overlayData_near,
@@ -752,7 +773,7 @@ def plotScatter(
     overlays = ['clim', 'near', 'time', 'none']
 
     # Data Ranges
-    ranges = ['full', 'standard']
+    ranges = ['full', 'standard', 'local']
 
     lineColors = [
         '#1f78b4',
@@ -880,6 +901,10 @@ def plotScatter(
     ax.set_ylim(yMin, yMax)
     fig.savefig(fileName + '_standard.png', dpi=300)
     fileNameList.append(fileName + '_standard.png')
+    ax.set_ylim(yMin_local, yMax_local)
+    fig.savefig(fileName + '_local.png', dpi=300)
+    fileNameList.append(fileName + '_local.png')
+
 
     for overlay in overlays:
         if 'time' in overlay:
@@ -964,6 +989,9 @@ def plotScatter(
             ax.set_ylim(yMin, yMax)
             fig.savefig(fileName + '_standard.png', dpi=300)
             fileNameList.append(fileName + '_standard.png')
+            ax.set_ylim(yMin_local, yMax_local)
+            fig.savefig(fileName + '_local.png', dpi=300)
+            fileNameList.append(fileName + '_local.png')
 
         if 'clim' in overlay:
             # add climatology trace
@@ -1023,6 +1051,9 @@ def plotScatter(
                 ax.set_ylim(yMin, yMax)
                 fig.savefig(fileName + '_standard.png', dpi=300)
                 fileNameList.append(fileName + '_standard.png')
+                ax.set_ylim(yMin_local, yMax_local)
+                fig.savefig(fileName + '_local.png', dpi=300)
+                fileNameList.append(fileName + '_local.png')
 
         if 'near' in overlay:
             # add nearest neighbor data traces
