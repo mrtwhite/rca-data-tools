@@ -193,7 +193,7 @@ def run_dashboard_creation(
             profile_paramMax = float(variable_paramDict[param]['profileMax'])
             localRanges = str(localRange_dict[site][param])
             if not 'nan' in localRanges:
-                localRange = literal_eval(loadRanges)
+                localRange = literal_eval(localRanges)
                 if 'local' in localRange:
                     paramMin_local = localRange['local'][0]
                     paramMax_local = localRange['local'][1]
