@@ -202,7 +202,7 @@ def run_dashboard_creation(
                     paramMax_local = paramMax
                 if 'local_profile' in localRange:
                     profile_paramMin_local = localRange['local_profile'][0]
-                    profile_paramMax_local = localRagne['local_profile'][1]
+                    profile_paramMax_local = localRange['local_profile'][1]
                 else:
                     profile_paramMin_local = profile_paramMin
                     profile_paramMax_local = profile_paramMax
