@@ -559,6 +559,8 @@ def plotProfilesGrid(
         if zi.shape[1] > 1:
           params = {'range':'full'}
           profilePlot = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
+          if 'deploy' in spanString:
+              plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
           fileName = fileName_base + '_' + spanString + '_' + 'none'
           profilePlot.savefig(fileName + '_full.png', dpi=300)
           fileNameList.append(fileName + '_full.png')
@@ -566,12 +568,16 @@ def plotProfilesGrid(
           params['vmin'] = zMin
           params['vmax'] = zMax
           profilePlot = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
+          if 'deploy' in spanString:
+              plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
           profilePlot.savefig(fileName + '_standard.png', dpi=300)
           fileNameList.append(fileName + '_standard.png')
           params = {'range':'local'}
           params['vmin'] = zMin_local
           params['vmax'] = zMax_local
           profilePlot = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
+          if 'deploy' in spanString:
+              plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
           profilePlot.savefig(fileName + '_local.png', dpi=300)
           fileNameList.append(fileName + '_local.png')
           emptySlice = 'no'
@@ -676,6 +682,8 @@ def plotProfilesGrid(
                     climParams['vmin'] = -maxLim
                     climParams['vmax'] = maxLim
                     climPlot = plotter(xiDT, yi, climDiff, 'clim', 'cmo.balance', 'no', climParams)
+                    if 'deploy' in spanString:
+                        plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
                     fileName = fileName_base + '_' + spanString + '_' + 'clim'
                     climPlot.savefig(fileName + '_full.png', dpi=300)
                     fileNameList.append(fileName + '_full.png')
@@ -714,7 +722,9 @@ def plotProfilesGrid(
                         climParams['vmin'] = climDiffMin
                         climParams['vmax'] = climDiffMax
                         climPlot = plotter(xiDT, yi, climDiff, 'clim', colorMapStandard, 'no', climParams)
-
+       
+                    if 'deploy' in spanString:
+                        plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
                     climPlot.savefig(fileName + '_standard.png', dpi=300)
                     fileNameList.append(fileName + '_standard.png')
                     climPlot.savefig(fileName + '_local.png', dpi=300)
@@ -881,6 +891,8 @@ def plotScatter(
         plt.plot(scatterX, scatterY, '.', color=lineColors[0], markersize=0.75)
     elif 'small' in plotMarkerSize:
         plt.plot(scatterX, scatterY, ',', color=lineColors[0])
+    if 'deploy' in spanString:
+        plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
     plt.xlim(xMin, xMax)
     # ylim_current = plt.gca().get_ylim()
     if scatterX.size == 0:
@@ -957,6 +969,9 @@ def plotScatter(
                         plt.plot(timeX,timeY,'.',markersize=0.75,c=c,label='%s' % legendString,)
                     elif 'small' in plotMarkerSize:
                         plt.plot(timeX,timeY,',',c=c,label='%s' % legendString,)
+                    if 'deploy' in spanString:
+                        deployTime_plot = timeTrace[0] + np.timedelta64(timedelta(days=365 * yearDiff))
+                        plt.axvline(deployTime_plot,linewidth=1,color=c,linestyle='-.')
                 del timeDS
                 gc.collect()
 
@@ -1039,6 +1054,8 @@ def plotScatter(
                         xy=(0.3, 0.5),
                         xycoords='axes fraction',
                     )
+                if 'deploy' in spanString:
+                    plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
                 divider = make_axes_locatable(ax)
                 cax = divider.append_axes("right", size="2%", pad=0.05)
                 for axis in ['top','bottom','left','right']:
