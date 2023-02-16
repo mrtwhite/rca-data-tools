@@ -168,7 +168,7 @@ def generate_tables(df_HITL: pd.DataFrame) -> None:
             df_statusList = df_statusList.iloc[:, 0]
             csvTable = df_statusList.to_csv(header=False)
             with open(
-                HITL_NOTES_DIR.joinpath(f"HITL_{status}.csv"), "w"
+                HITL_NOTES_DIR.joinpath(f"HITL_Status_{status}.csv"), "w"
             ) as f:
                 f.write(csvTable)
 
