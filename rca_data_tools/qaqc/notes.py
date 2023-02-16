@@ -162,15 +162,15 @@ def generate_tables(df_HITL: pd.DataFrame) -> None:
                 ) as f:
                     f.write(csvTable)
     statusList = ['Watchlist', 'Failed']
-        for status in statusList:
-            df_statusList = df_HITL[df_HITL[0].str.contains(status,case=False)]
-            if not df_statusList.empty:
-                df_statusList = df_statusList.iloc[:, 0]
-                csvTable = df_statusList.to_csv(header=False)
-                with open(
-                    HITL_NOTES_DIR.joinpath(f"HITL_{status}.csv"), "w"
-                ) as f:
-                    f.write(csvTable)
+    for status in statusList:
+        df_statusList = df_HITL[df_HITL[0].str.contains(status,case=False)]
+        if not df_statusList.empty:
+            df_statusList = df_statusList.iloc[:, 0]
+            csvTable = df_statusList.to_csv(header=False)
+            with open(
+                HITL_NOTES_DIR.joinpath(f"HITL_{status}.csv"), "w"
+            ) as f:
+                f.write(csvTable)
 
 def parse_args():
     arg_parser = argparse.ArgumentParser(
