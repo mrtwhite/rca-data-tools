@@ -769,6 +769,7 @@ def plotScatter(
     yMax_local,
     fileName_base,
     overlayData_clim,
+    overlayData_flag,
     overlayData_near,
     plotMarkerSize,
     span,
@@ -780,7 +781,7 @@ def plotScatter(
     fileNameList = []
 
     # Plot Overlays
-    overlays = ['clim', 'near', 'time', 'none']
+    overlays = ['clim', 'flag', 'near', 'time', 'none']
 
     # Data Ranges
     ranges = ['full', 'standard', 'local']
@@ -877,6 +878,7 @@ def plotScatter(
         xMax = endDate + timedelta(days=int(span) * 0.002)
 
     baseDS = paramData.sel(time=slice(startDate, endDate))
+    
     scatterX = baseDS.time.values
     scatterY = np.array([])
     if len(scatterX) > 0:
@@ -1075,4 +1077,190 @@ def plotScatter(
         if 'near' in overlay:
             # add nearest neighbor data traces
             print('adding nearest neighbor data to plot')
+
+        if 'flag' in overlay:
+            # highlight flagged data points
+            print('adding flagged data overlay to plot')
+            if 'no' in emptySlice:
+                fig, ax = setPlot()
+                plt.xlim(xMin, xMax)
+                legendString = 'all data'
+                if 'large' in plotMarkerSize:
+                    plt.plot(
+                        scatterX, 
+                        scatterY,
+                        '.',
+                        color=lineColors[0],
+                        markersize=2,
+                        label='%s' % legendString,
+                    )
+                elif 'medium' in plotMarkerSize:
+                    plt.plot(
+                        scatterX,
+                        scatterY,
+                        '.',
+                        color=lineColors[0],
+                        markersize=0.75,
+                        label='%s' % legendString,
+                    )
+                elif 'small' in plotMarkerSize:
+                    plt.plot(scatterX, scatterY, ',', color=lineColors[0], label='%s' % legendString,)
+                # retrieve flags
+                qcDS = retrieve_qc(overlayData_flag)
+                flags = {
+                    ##'qartod_grossRange':{'symbol':'+', 'param':'_qartod_gr_flag'},
+                    ##'qartod_climatology':{'symbol':'x','param':'_qartod_cl_flag'},
+                    'qartod_summary':{'symbol':'1','param':'_qartod_results'},
+                    'qc':{'symbol':'s','param':'_qc_summary_flag'},
+                }
+                for flagType in flags.keys():
+                    flagString = Yparam + flags[flagType]['param']
+                    print(flagString)
+                    if flagString in qcDS:
+                        print('paramters found for ',flagString)
+                        flagStatus = {'fail':{'value':4,'color':'r'}, 'suspect':{'value':3,'color':'y'}}
+                        for level in flagStatus.keys():
+                            flaggedDS = qcDS.where(qcDS[flagString] == flagStatus[level]['value'], drop=True)
+                            flag_X = flaggedDS.time.values
+                            if len(flag_X) > 0:
+                                n = len(flag_X)
+                                legendString = f'{flagType} {level}: {n} points'
+                                flag_Y = flaggedDS[Yparam].values
+                                plt.plot(
+                                    flag_X,
+                                    flag_Y,
+                            	    flags[flagType]['symbol'],
+                            	    color=flagStatus[level]['color'],
+                            	    markersize=0.25,
+                            	    label='%s' % legendString,   
+                            	    )
+                            else:
+                                legendString = f'{flagType} {level}: no points flagged'
+                                plt.plot([0],[0],color='w',markersize=0,label='%s' % legendString,)
+                    else:
+                        print('no paramters found for ',flagString)
+                        legendString = f'no {flagType} flags found'
+                        plt.plot(scatterX,scatterY,alpha=0,markersize=0,label='%s' % legendString,)
+
+                # generating custom legend 
+                handles, labels = ax.get_legend_handles_labels()
+                patches = []
+                for handle, label in zip(handles, labels):
+                    patches.append(
+                        mlines.Line2D(
+                            [],  
+                            [],
+                            color=handle.get_color(),
+                            marker=handle.get_marker(),
+                            markersize=1,
+                            linewidth=0,  
+                            label=label,
+                        )
+                    )
+                  
+                legend = ax.legend(handles=patches, loc="upper right", fontsize=3)
+
+
+                if 'deploy' in spanString:
+                    plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes("right", size="2%", pad=0.05)
+                for axis in ['top','bottom','left','right']:
+                    cax.spines[axis].set_linewidth(0)
+                cax.set_xticks([])
+                cax.set_yticks([])
+                fileName = fileName_base + '_' + spanString + '_' + 'flag'
+                fig.savefig(fileName + '_full.png', dpi=300)
+                fileNameList.append(fileName + '_full.png')
+                ax.set_ylim(yMin, yMax)
+                fig.savefig(fileName + '_standard.png', dpi=300)
+                fileNameList.append(fileName + '_standard.png')
+                ax.set_ylim(yMin_local, yMax_local)
+                fig.savefig(fileName + '_local.png', dpi=300)
+                fileNameList.append(fileName + '_local.png')
+
     return fileNameList
+
+
+
+def retrieve_qc(ds):
+    """
+    Extract the QC test results from the different variables in the data set,
+    and create a new variable with the QC test results set to match the logic
+    used in QARTOD testing. Instead of setting the results to an integer
+    representation of a bitmask, use the pass = 1, not_evaluated = 2,
+    suspect_or_of_high_interest = 3, fail = 4 and missing = 9 flag values from
+    QARTOD.
+    The QC portion of this code was copied from the ooi-data-explorations parse_qc function, 
+    which was was inspired by an example notebook developed by the OOI Data
+    Team for the 2018 Data Workshops. The original example, by Friedrich Knuth,
+    and additional information on the original OOI QC algorithms can be found
+    at:
+    https://oceanobservatories.org/knowledgebase/interpreting-qc-variables-and-results/
+    :param ds: dataset with *_qc_executed and *_qc_results variables
+               as well as qartod_executed variables if available
+    :return ds: dataset with the *_qc_executed and *_qc_results variables
+        reworked to create a new *_qc_summary variable with the results
+        of the QC checks decoded into a QARTOD style flag value, as well as 
+        extracted qartod variables (gross range and climatology).  Code will need to be
+        adapted as more tests are added...
+    """
+    # create a list of the variables that have had QC tests applied
+    variables = [x.split('_qc_results')[0] for x in ds.variables if 'qc_results' in x]
+
+    # for each variable with qc tests applied
+    for var in variables:
+        # set the qc_results and qc_executed variable names and the new qc_flags variable name
+        qc_result = var + '_qc_results'
+        qc_executed = var + '_qc_executed'
+        qc_summary = var + '_qc_summary_flag'
+
+        # create the initial qc_flags array
+        flags = np.tile(np.array([0, 0, 0, 0, 0, 0, 0, 0]), (len(ds.time), 1))
+        # the list of tests run, and their bit positions are:
+        #    0: dataqc_globalrangetest
+        #    1: dataqc_localrangetest
+        #    2: dataqc_spiketest
+        #    3: dataqc_polytrendtest
+        #    4: dataqc_stuckvaluetest
+        #    5: dataqc_gradienttest
+        #    6: undefined
+        #    7: dataqc_propagateflags
+
+        # use the qc_executed variable to determine which tests were run, and set up a bit mask to pull out the results
+        executed = np.bitwise_or.reduce(ds[qc_executed].values.astype('uint8'))
+        executed_bits = np.unpackbits(executed.astype('uint8'))
+
+        # for each test executed, reset the qc_flags for pass == 1, suspect == 3, or fail == 4
+        for index, value in enumerate(executed_bits[::-1]):
+            if value:
+                if index in [2, 3, 4, 5, 6, 7]:
+                    flag = 3
+                else:
+                    # only mark the global range test as fail, all the other tests are problematic
+                    flag = 4
+                mask = 2 ** index
+                m = (ds[qc_result].values.astype('uint8') & mask) > 0
+                flags[m, index] = 1   # True == pass
+                flags[~m, index] = flag  # False == suspect/fail
+
+        # add the qc_flags to the dataset, rolling up the results into a single value
+        ds[qc_summary] = ('time', flags.max(axis=1, initial=1).astype(np.int32))
+
+    # create a list of the variables that have had QARTOD tests applied
+    variables = [x.split('_qartod_executed')[0] for x in ds.variables if 'qartod_executed' in x]
+
+    # for each variable with qc tests applied
+    for var in variables:
+        qartodString = var + '_qartod_executed'
+        flagNameBase = var + '_qartod_'
+        testOrder = ds[qartodString][0].tests_executed.strip("'").replace(" ","").split(',')
+        for i in range(0, len(testOrder)):
+            flagString = testOrder[i]
+            flagIndex = testOrder.index(flagString)
+            flagName = flagNameBase + flagString
+            ds[flagName] = [int(i[flagIndex]) for i in ds[qartodString].values.tolist()]
+
+    return ds
+
+

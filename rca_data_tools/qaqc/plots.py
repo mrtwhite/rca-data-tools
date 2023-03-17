@@ -151,8 +151,12 @@ def run_dashboard_creation(
     # load data for site
     siteData = dashboard.loadData(site, sites_dict)
     fileParams = sites_dict[site]['dataParameters'].strip('"').split(',')
-    # drop un-used variables from dataset
     allVar = list(siteData.keys())
+    # add qartod and qc flags to fileParams list
+    qcStrings = ['_qartod_','_qc_']
+    qcParams = [var for var in allVar if any(sub in var for sub in fileParams) if any(qc in var for qc in qcStrings)]
+    fileParams = fileParams + qcParams
+    # drop un-used variables from dataset
     dropList = [item for item in allVar if item not in fileParams]
     siteData = siteData.drop(dropList)
     # extract parameters from multi-dimensional array
@@ -217,7 +221,7 @@ def run_dashboard_creation(
             )
             overlayData_near = {}
             # overlayData_near = loadNear(site)
-
+            
             if 'PROFILER' in plotInstrument:
                 profileList = dashboard.loadProfiles(site)
                 pressureParams = (
@@ -231,6 +235,9 @@ def run_dashboard_creation(
                 else:
                     pressParam = pressureParamList[0]
                     paramData = siteData[[Yparam, pressParam]].chunk('auto')
+                    flagParams = [item for item in qcParams if Yparam in item]
+                    flagParams.append([Yparam, pressParam])
+                    overlayData_flag = siteData[flagParams].chunk('auto')
                     colorMap = 'cmo.' + variable_paramDict[param]['colorMap']
                     depthMinMax = (
                         sites_dict[site]['depthMinMax'].strip('"').split(',')
@@ -272,6 +279,13 @@ def run_dashboard_creation(
                                     < (int(profileDepth) + 0.5)
                                 )
                             )
+                            overlayData_flag_extract = overlayData_flag.where(
+                                (int(profileDepth) < overlayData_flag[pressParam])
+                                & (
+                                    overlayData_flag[pressParam]
+                                    < (int(profileDepth) + 0.5)
+                                )
+                            )
                             plotTitle_depth = (
                                 plotTitle + ': ' + profileDepth + ' meters'
                             )
@@ -298,6 +312,7 @@ def run_dashboard_creation(
                                 profile_paramMax_local,
                                 imageName_base_depth,
                                 overlayData_clim_extract,
+                                overlyaData_flag_extract,
                                 overlayData_near,
                                 'medium',
                                 span,
@@ -308,6 +323,10 @@ def run_dashboard_creation(
                             plotList.append(plots)
             else:
                 paramData = siteData[Yparam]
+                flagParams = [item for item in qcParams if Yparam in item]
+                flagParams.append(Yparam)
+                overlayData_flag = siteData[flagParams].chunk('auto')
+
                 if overlayData_clim:
                     overlayData_clim_extract = dashboard.extractClim(
                         timeRef, '0', overlayData_clim
@@ -327,6 +346,7 @@ def run_dashboard_creation(
                     paramMax_local,
                     imageName_base,
                     overlayData_clim_extract,
+                    overlayData_flag,
                     overlayData_near,
                     'small',
                     span,
