@@ -236,7 +236,7 @@ def run_dashboard_creation(
                     pressParam = pressureParamList[0]
                     paramData = siteData[[Yparam, pressParam]].chunk('auto')
                     flagParams = [item for item in qcParams if Yparam in item]
-                    flagParams.append([Yparam, pressParam])
+                    flagParams.extend((Yparam, pressParam))
                     overlayData_flag = siteData[flagParams].chunk('auto')
                     colorMap = 'cmo.' + variable_paramDict[param]['colorMap']
                     depthMinMax = (
@@ -312,7 +312,7 @@ def run_dashboard_creation(
                                 profile_paramMax_local,
                                 imageName_base_depth,
                                 overlayData_clim_extract,
-                                overlyaData_flag_extract,
+                                overlayData_flag_extract,
                                 overlayData_near,
                                 'medium',
                                 span,
