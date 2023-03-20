@@ -1238,7 +1238,8 @@ def retrieve_qc(ds):
         for index, value in enumerate(executed_bits[::-1]):
             if value:
                 if index in [2, 3, 4, 5, 6, 7]:
-                    flag = 3
+                    # mark these tests as missing since they are problematic
+                    flag = 9
                 else:
                     # only mark the global range test as fail, all the other tests are problematic
                     flag = 4
