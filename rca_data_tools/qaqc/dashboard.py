@@ -1086,6 +1086,7 @@ def plotScatter(
                 plt.xlim(xMin, xMax)
                 legendString = 'all data'
                 if 'large' in plotMarkerSize:
+                    flagMarker = 3
                     plt.plot(
                         scatterX, 
                         scatterY,
@@ -1095,6 +1096,7 @@ def plotScatter(
                         label='%s' % legendString,
                     )
                 elif 'medium' in plotMarkerSize:
+                    flagMarker = 1.5
                     plt.plot(
                         scatterX,
                         scatterY,
@@ -1104,6 +1106,7 @@ def plotScatter(
                         label='%s' % legendString,
                     )
                 elif 'small' in plotMarkerSize:
+                    flagMarker = 0.25
                     plt.plot(scatterX, scatterY, ',', color=lineColors[0], label='%s' % legendString,)
                 # retrieve flags
                 qcDS = retrieve_qc(overlayData_flag)
@@ -1131,7 +1134,7 @@ def plotScatter(
                                     flag_Y,
                             	    flags[flagType]['symbol'],
                             	    color=flagStatus[level]['color'],
-                            	    markersize=0.25,
+                            	    markersize=flagMarker,
                             	    label='%s' % legendString,   
                             	    )
                             else:
