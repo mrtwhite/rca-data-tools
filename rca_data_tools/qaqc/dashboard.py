@@ -1108,8 +1108,10 @@ def plotScatter(
                 elif 'small' in plotMarkerSize:
                     flagMarker = 0.25
                     plt.plot(scatterX, scatterY, ',', color=lineColors[0], label='%s' % legendString,)
+                # slice overlayData_flag
+                qcDS = overlayData_flag.sel(time=slice(startDate, endDate))
                 # retrieve flags
-                qcDS = retrieve_qc(overlayData_flag)
+                qcDS = retrieve_qc(qcDS)
                 flags = {
                     ##'qartod_grossRange':{'symbol':'+', 'param':'_qartod_gr_flag'},
                     ##'qartod_climatology':{'symbol':'x','param':'_qartod_cl_flag'},
