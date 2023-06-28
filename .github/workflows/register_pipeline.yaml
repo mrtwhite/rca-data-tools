@@ -39,11 +39,16 @@ jobs:
 
       - name: Run login and registration
         run: |
-          # Make prefect dir
+        # Make prefect dir
           mkdir ~/.prefect
-
+          
           # Login
-          prefect auth login --key ${{ secrets.PREFECT_TOKEN }}
+          ###prefect auth login --key ${{ secrets.PREFECT_TOKEN }}
+        
+          # Set backend of prefect to server
+          prefect backend server
+          echo "[server]" >> ~/.prefect/backend.toml
+          echo "endpoint = 'http://54.213.226.252:4200'" >> ~/.prefect/backend.toml
 
           # Run flow
           qaqc_pipeline --register --cloud --s3-sync
