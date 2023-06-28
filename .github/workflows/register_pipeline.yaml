@@ -39,7 +39,7 @@ jobs:
 
       - name: Run login and registration
         run: |
-        # Make prefect dir
+          # Make prefect dir
           mkdir ~/.prefect
           
           # Login
