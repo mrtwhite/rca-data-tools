@@ -49,6 +49,10 @@ jobs:
           prefect backend server
           echo "[server]" >> ~/.prefect/backend.toml
           echo "endpoint = 'http://54.213.226.252:4200'" >> ~/.prefect/backend.toml
+ 
+          echo "[server]" >> ~/.prefect/config.toml
+          echo "[server_ui]" >> ~/.prefect/config.toml
+          echo "endpoint = 'http://54.213.226.252:4200'" >> ~/.prefect/config.toml
 
           # Run flow
           qaqc_pipeline --register --cloud --s3-sync
