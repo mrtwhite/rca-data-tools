@@ -33,6 +33,10 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import cmocean # noqa
 from scipy.interpolate import griddata
 
+
+INPUT_BUCKET = "ooi-data-prod/"
+
+
 def pressureBracket(pressure, clim_dict):
     bracketList = []
     pressBracket = 'notFound'
@@ -294,7 +298,7 @@ def loadStatus():
 
 def loadData(site, sites_dict):
     fs = s3fs.S3FileSystem(anon=True)
-    zarrDir = 'ooi-data/' + sites_dict[site]['zarrFile']
+    zarrDir = INPUT_BUCKET + sites_dict[site]['zarrFile']
     zarr_store = fs.get_mapper(zarrDir)
     # TODO: only request parameters listed in sites_dict[site][dataParameters]?
     # requestParams = sites_dict[site]['dataParameters'].strip('"').split(',')
