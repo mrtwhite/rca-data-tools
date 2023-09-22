@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """pipeline.py
 
-This module contains code for building and registering
-prefect 1.0 flows.
+This module has been adapted to build prefect 2 flows. 
 
 """
 import datetime
@@ -12,12 +11,15 @@ import warnings
 import argparse
 import time
 from pathlib import Path
-from prefect import task, Flow, Parameter
-from prefect.storage import Docker
-from prefect.run_configs import ECSRun
-from prefect.tasks.prefect import create_flow_run
-import prefect.engine.signals as prefect_signals
+from prefect import task, flow
+#from prefect.storage import Docker
+#from prefect.run_configs import ECSRun
+#from prefect.tasks.prefect import create_flow_run
+#import prefect.engine.signals as prefect_signals
 
+# ** PREFECT 2 **
+from prefect.states import Failed, Cancelled
+from prefect.deployments import run_deployment
 
 from rca_data_tools.qaqc.plots import (
     instrument_dict,
@@ -28,46 +30,52 @@ from rca_data_tools.qaqc.plots import (
 )
 
 HERE = Path(__file__).parent.absolute()
-S3_BUCKET = 'ooi-rca-qaqc'
-PROJECT_NAME = 'rca-qaqc'
+S3_BUCKET = 'ooi-rca-qaqc-prod'
+#PROJECT_NAME = 'rca-qaqc'
 
 
-def register_flow(
-    flow: Flow, project_name: str = PROJECT_NAME
-) -> Tuple[str, str]:
-    """
-    Register flow to prefect cloud.
+# def register_flow(
+#     flow: Flow, project_name: str = PROJECT_NAME
+# ) -> Tuple[str, str]:
+#     """
+#     Register flow to prefect cloud.
 
-    Parameters
-    ----------
-    x : prefect.Flow
-        Prefect flow object to be registered.
-    y : str
-        Project name where the prefect flow should be registered to.
-        Defaults to `rca-qaqc`.
+#     Parameters
+#     ----------
+#     x : prefect.Flow
+#         Prefect flow object to be registered.
+#     y : str
+#         Project name where the prefect flow should be registered to.
+#         Defaults to `rca-qaqc`.
 
-    Returns
-    -------
-    tuple
-        (flow name, project name)
+#     Returns
+#     -------
+#     tuple
+#         (flow name, project name)
 
-    """
-    ready = False
-    while not ready:
-        # Keep trying to avoid docker registry interruptions
-        try:
-            flow.validate()
-            res = flow.register(project_name=project_name)
-            if isinstance(res, str):
-                ready = True
-        except Exception as e:
-            warnings.warn(e)
-            ready = False
-    return flow.name, project_name
+#     """
+#     ready = False
+#     while not ready:
+#         # Keep trying to avoid docker registry interruptions
+#         try:
+#             flow.validate()
+#             res = flow.register(project_name=project_name)
+#             if isinstance(res, str):
+#                 ready = True
+#         except Exception as e:
+#             warnings.warn(e)
+#             ready = False
+#     return flow.name, project_name
 
 
 @task
-def dashboard_creation_task(site, timeString, span, threshold, logger):
+def dashboard_creation_task(
+    site, 
+    timeString, 
+    span, 
+    threshold, 
+    #logger
+    ):
     """
     Prefect task for running dashboard creation
     """
@@ -86,13 +94,15 @@ def dashboard_creation_task(site, timeString, span, threshold, logger):
             plotInstrument,
             span,
             threshold,
-            logger,
+            #logger,
         )
         return plotList
     except Exception as e:
-        raise prefect_signals.FAIL(
-            message=f"PNG Creation Failed for {site}: {e}"
-        )
+        # raise prefect_signals.FAIL(
+        #     message=f"PNG Creation Failed for {site}: {e}"
+        # )
+        return Failed(message=f"PNG Creation Failed for {site}: {e}")
+        
 
 
 @task
@@ -107,13 +117,14 @@ def organize_pngs_task(
             sync_to_s3=sync_to_s3, fs_kwargs=fs_kwargs, bucket_name=s3_bucket
         )
     else:
-        raise prefect_signals.SKIP(message="No plots found to be organized.")
+        #raise prefect_signals.SKIP(message="No plots found to be organized.")
+        return Cancelled(message="No plots found to be organized.")
 
 
 def create_flow(
     name: str = "create_dashboard",
-    storage: Optional[Docker] = None,
-    run_config: Optional[ECSRun] = None,
+    #storage: Optional[Docker] = None,
+    #run_config: Optional[ECSRun] = None,
     schedule: Optional[Any] = None,
 ):
     """
@@ -140,30 +151,47 @@ def create_flow(
     """
     now = datetime.datetime.utcnow()
     # TODO: Add schedule so it can cron away!
-    with Flow(
-        name, storage=storage, run_config=run_config, schedule=schedule
-    ) as flow:
-        # For dashboard png creation
-        site_param = Parameter(
-            'site', default='CE02SHBP-LJ01D-06-CTDBPN106', required=True
-        )
-        timeString_param = Parameter(
-            'timeString', default=now.strftime('%Y-%m-%d'), required=False
-        )
-        span_param = Parameter('span', default='1', required=False)
-        threshold_param = Parameter(
-            'threshold', default=1000000, required=False
-        )
-        logger_param = Parameter('logger', default='prefect', required=False)
+    # with Flow(
+    #     name, storage=storage, run_config=run_config, schedule=schedule
+    # ) as flow:
+    #     # For dashboard png creation
+    #     site_param = Parameter(
+    #         'site', default='CE02SHBP-LJ01D-06-CTDBPN106', required=True
+    #     )
+    #     timeString_param = Parameter(
+    #         'timeString', default=now.strftime('%Y-%m-%d'), required=False
+    #     )
+    #     span_param = Parameter('span', default='1', required=False)
+    #     threshold_param = Parameter(
+    #         'threshold', default=1000000, required=False
+    #     )
+    #     logger_param = Parameter('logger', default='prefect', required=False)
 
+    #     # For organizing pngs
+    #     fs_kwargs_param = Parameter('fs_kwargs', default={}, required=False)
+    #     sync_to_s3_param = Parameter(
+    #         'sync_to_s3', default=False, required=False
+    #     )
+    #     s3_bucket_param = Parameter(
+    #         's3_bucket', default=S3_BUCKET, required=False
+    #     )
+
+    default_run_config = {}
+
+    @flow
+    def qaqc_pipeline_flow(
+        name: str='create dashboard',
+        #run_config: dict=default_run_config, #TODO something like this for run configs?
+        site_param: str='CE02SHBP-LJ01D-06-CTDBPN106',
+        timeString_param: str=now.strftime('%Y-%m-%d'),
+        span_param: str='1',
+        threshold_param: int=1000000,
+        #logger_param
         # For organizing pngs
-        fs_kwargs_param = Parameter('fs_kwargs', default={}, required=False)
-        sync_to_s3_param = Parameter(
-            'sync_to_s3', default=False, required=False
-        )
-        s3_bucket_param = Parameter(
-            's3_bucket', default=S3_BUCKET, required=False
-        )
+        fs_kwargs_param: dict={},
+        sync_to_s3_param: bool=False,
+        s3_bucket_param: str=S3_BUCKET,
+        ):
 
         # Run dashboard creation task
         plotList = dashboard_creation_task(
@@ -171,7 +199,7 @@ def create_flow(
             timeString=timeString_param,
             span=span_param,
             threshold=threshold_param,
-            logger=logger_param,
+            #logger=logger_param,
         )
 
         # Run organize pngs task
@@ -181,7 +209,7 @@ def create_flow(
             fs_kwargs=fs_kwargs_param,
             s3_bucket=s3_bucket_param,
         )
-    return flow
+    #return flow
 
 
 class QAQCPipeline:
@@ -296,30 +324,30 @@ class QAQCPipeline:
         """
         return self.__dockerfile_path.read_text(encoding='utf-8')
 
-    @property
-    def storage(self):
-        """
-        Docker Storage Option
-        """
-        if self.cloud_run is True:
-            storage_options = self.docker_storage_options()
-            return Docker(**storage_options)
-        return
+    # @property
+    # def storage(self):
+    #     """
+    #     Docker Storage Option
+    #     """
+    #     if self.cloud_run is True:
+    #         storage_options = self.docker_storage_options()
+    #         return Docker(**storage_options)
+    #     return
 
-    @property
-    def run_config(self):
-        """
-        ECS Run Configuration
-        """
-        if self.cloud_run is True:
-            # NOTE: As of 4/28/2022 instance resources is not used at this time
-            resources = self._parse_resources()
-            run_config = self.ecs_run_options(
-                cpu=resources.get('cpu', None),
-                memory=resources.get('memory', None),
-            )
-            return ECSRun(**run_config)
-        return
+    # @property
+    # def run_config(self):
+    #     """
+    #     ECS Run Configuration
+    #     """
+    #     if self.cloud_run is True:
+    #         # NOTE: As of 4/28/2022 instance resources is not used at this time
+    #         resources = self._parse_resources()
+    #         run_config = self.ecs_run_options(
+    #             cpu=resources.get('cpu', None),
+    #             memory=resources.get('memory', None),
+    #         )
+    #         return ECSRun(**run_config)
+    #     return
 
     @staticmethod
     def _get_resource_values(resource: str) -> Dict:
@@ -349,10 +377,10 @@ class QAQCPipeline:
             'instance': instance_spans.get(self.span, None),
         }
 
-    def __setup_flow(self):
-        self.flow = create_flow()
-        self.flow.storage = self.storage
-        self.flow.run_config = self.run_config
+    # def __setup_flow(self):
+    #     self.flow = create_flow()
+    #     self.flow.storage = self.storage
+    #     self.flow.run_config = self.run_config
 
     def run(self, parameters=None):
         """
@@ -364,12 +392,19 @@ class QAQCPipeline:
             parameters = self.flow_parameters
 
         if self.cloud_run is True:
-            create_flow_run.run(
-                flow_name=self.flow.name,
-                project_name=PROJECT_NAME,
-                parameters=parameters,
-                run_config=self.run_config,
-                run_name=self.name,
+            # create_flow_run.run(
+            #     flow_name=self.flow.name,
+            #     project_name=PROJECT_NAME,
+            #     parameters=parameters,
+            #     run_config=self.run_config,
+            #     run_name=self.name,
+            # )
+            run_name = "-".join([self.site, self.time, self.threshold, self.span, "FLOWRUN"])
+            run_deployment(
+                name="qaqc-pipeline-flow/4vcpu_16gb",
+                #parameters=flow_params,
+                flow_run_name=run_name,
+                timeout=10 #TODO timeout might need to be increase if we have race condition errors
             )
         else:
             self.flow.run(parameters=parameters)
@@ -538,8 +573,9 @@ def main():
         )
 
         if args.register is True:
-            logger.info(f"Registering pipeline {pipeline.flow.name}.")
-            register_flow(pipeline.flow)
+            # logger.info(f"Registering pipeline {pipeline.flow.name}.")
+            # register_flow(pipeline.flow)
+            logger.warning("Joe thinks this argument is no longer necessary")
 
         if args.run is True:
             pipeline.run()

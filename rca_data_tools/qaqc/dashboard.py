@@ -21,6 +21,7 @@ import requests
 import s3fs
 import statistics as st
 import xarray as xr
+from loguru import logger
 
 
 import matplotlib.pyplot as plt

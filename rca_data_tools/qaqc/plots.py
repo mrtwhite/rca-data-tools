@@ -127,14 +127,16 @@ def run_dashboard_creation(
     plotInstrument,
     span,
     decimationThreshold,
-    logger=None,
+    #logger=None,
 ):
-    if logger == 'prefect':
-        import prefect
+    # if logger == 'prefect':
+    #     import prefect
 
-        logger = prefect.context.get("logger")
-    else:
-        from loguru import logger
+    #     logger = prefect.context.get("logger")
+    # else:
+    #     from loguru import logger
+    from prefect import get_run_logger
+    logger = get_run_logger()
 
     if isinstance(timeRef, str):
         timeRef = parser.parse(timeRef)
