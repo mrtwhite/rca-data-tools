@@ -121,35 +121,35 @@ def organize_pngs_task(
         return Cancelled(message="No plots found to be organized.")
 
 
-def create_flow(
-    name: str = "create_dashboard",
-    #storage: Optional[Docker] = None,
-    #run_config: Optional[ECSRun] = None,
-    schedule: Optional[Any] = None,
-):
-    """
-    Create prefect flow for plot creation tasks.
+# def create_flow(
+#     name: str = "create_dashboard",
+#     #storage: Optional[Docker] = None,
+#     #run_config: Optional[ECSRun] = None,
+#     schedule: Optional[Any] = None,
+# ):
+#     """
+#     Create prefect flow for plot creation tasks.
 
-    Parameters
-    ----------
-    name : str
-        The name of the prefect flow.
-    storage : prefect.storage.Docker, optional
-        Prefect storage where the flow and tasks code should be stored.
-    run_config: prefect.storage.ECSRun, optional
-        Prefect run configurations.
-    schedule: optional
-        Prefect schedule.
-        **Note: Currently not used**
+#     Parameters
+#     ----------
+#     name : str
+#         The name of the prefect flow.
+#     storage : prefect.storage.Docker, optional
+#         Prefect storage where the flow and tasks code should be stored.
+#     run_config: prefect.storage.ECSRun, optional
+#         Prefect run configurations.
+#     schedule: optional
+#         Prefect schedule.
+#         **Note: Currently not used**
 
-    Returns
-    -------
-    prefect.Flow
-        Prefect flow objects with specified name,
-        storage, run configs, and schedule.
+#     Returns
+#     -------
+#     prefect.Flow
+#         Prefect flow objects with specified name,
+#         storage, run configs, and schedule.
 
-    """
-    now = datetime.datetime.utcnow()
+#     """
+    # now = datetime.datetime.utcnow()
     # TODO: Add schedule so it can cron away!
     # with Flow(
     #     name, storage=storage, run_config=run_config, schedule=schedule
@@ -176,40 +176,41 @@ def create_flow(
     #         's3_bucket', default=S3_BUCKET, required=False
     #     )
 
-    default_run_config = {}
+now = datetime.datetime.utcnow()
+default_run_config = {} #TODO something like this for run configs 
 
-    @flow
-    def qaqc_pipeline_flow(
-        name: str='create dashboard',
-        #run_config: dict=default_run_config, #TODO something like this for run configs?
-        site_param: str='CE02SHBP-LJ01D-06-CTDBPN106',
-        timeString_param: str=now.strftime('%Y-%m-%d'),
-        span_param: str='1',
-        threshold_param: int=1000000,
-        #logger_param
-        # For organizing pngs
-        fs_kwargs_param: dict={},
-        sync_to_s3_param: bool=False,
-        s3_bucket_param: str=S3_BUCKET,
-        ):
+@flow
+def qaqc_pipeline_flow(
+    name: str='create dashboard',
+    #run_config: dict=default_run_config, #TODO something like this for run configs?
+    site_param: str='CE02SHBP-LJ01D-06-CTDBPN106',
+    timeString_param: str=now.strftime('%Y-%m-%d'),
+    span_param: str='1',
+    threshold_param: int=1000000,
+    #logger_param
+    # For organizing pngs
+    fs_kwargs_param: dict={},
+    sync_to_s3_param: bool=False,
+    s3_bucket_param: str=S3_BUCKET,
+    ):
 
-        # Run dashboard creation task
-        plotList = dashboard_creation_task(
-            site=site_param,
-            timeString=timeString_param,
-            span=span_param,
-            threshold=threshold_param,
-            #logger=logger_param,
-        )
+    # Run dashboard creation task
+    plotList = dashboard_creation_task(
+        site=site_param,
+        timeString=timeString_param,
+        span=span_param,
+        threshold=threshold_param,
+        #logger=logger_param,
+    )
 
-        # Run organize pngs task
-        organize_pngs_task(
-            plotList=plotList,
-            sync_to_s3=sync_to_s3_param,
-            fs_kwargs=fs_kwargs_param,
-            s3_bucket=s3_bucket_param,
-        )
-    #return flow
+    # Run organize pngs task
+    organize_pngs_task(
+        plotList=plotList,
+        sync_to_s3=sync_to_s3_param,
+        fs_kwargs=fs_kwargs_param,
+        s3_bucket=s3_bucket_param,
+    )
+#return flow
 
 
 class QAQCPipeline:
@@ -218,7 +219,7 @@ class QAQCPipeline:
 
 
     """
-    __dockerfile_path = HERE / "docker" / "Dockerfile"
+    __dockerfile_path = HERE / "docker" / "Dockerfile" #TODO is this necessary?
     __prefect_directory = "/home/jovyan/prefect"
 
     def __init__(
@@ -244,8 +245,8 @@ class QAQCPipeline:
         self.s3fs_kwargs = s3fs_kwargs
         self._site_ds = {}
 
-        self.__setup()
-        self.__setup_flow()
+        self.__setup() #TODO
+        #self.__setup_flow() #TODO
 
     def __setup(self):
         self.created_dt = datetime.datetime.utcnow()
@@ -274,7 +275,7 @@ class QAQCPipeline:
     @cloud_run.setter
     def cloud_run(self, cr):
         self._cloud_run = cr
-        self.__setup_flow()
+        #self.__setup_flow()
 
     @property
     def parameters(self):
@@ -399,7 +400,7 @@ class QAQCPipeline:
             #     run_config=self.run_config,
             #     run_name=self.name,
             # )
-            run_name = "-".join([self.site, self.time, self.threshold, self.span, "FLOWRUN"])
+            run_name = "-".join([str(self.site), str(self.time), str(self.threshold), str(self.span), "FLOWRUN"])
             run_deployment(
                 name="qaqc-pipeline-flow/4vcpu_16gb",
                 #parameters=flow_params,
@@ -407,9 +408,9 @@ class QAQCPipeline:
                 timeout=10 #TODO timeout might need to be increase if we have race condition errors
             )
         else:
-            self.flow.run(parameters=parameters)
+            qaqc_pipeline_flow()
 
-    def docker_storage_options(
+    def docker_storage_options( #TODO can this method be deprecated?
         self,
         registry_url=None,
         image_name=None,
@@ -447,7 +448,8 @@ class QAQCPipeline:
         }
         return dict(**storage_options, **kwargs)
 
-    def ecs_run_options(
+    def ecs_run_options( #TODO can this method also be deprecated?
+            
         self,
         cpu=None,
         memory=None,

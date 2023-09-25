@@ -1,0 +1,33 @@
+# Welcome to your prefect.yaml file! You can use this file for storing and managing
+# configuration for deploying your flows. We recommend committing this file to source
+# control along with your flow code.
+
+# Generic metadata about this project
+name: rca-data-tools
+prefect-version: 2.11.5
+
+# build section allows you to manage and build docker images
+build: null
+
+# push section allows you to manage if and how this project is uploaded to remote locations
+push: null
+
+# pull section allows you to provide instructions for cloning this project in remote locations
+pull:
+- prefect.deployments.steps.git_clone:
+    repository: https://github.com/OOI-CabledArray/rca-data-tools.git
+    branch: prefect2_migration
+
+# the deployments section allows you to provide configuration for deploying flows
+deployments:
+- name: 4vcpu_16gb
+  version: null
+  tags: []
+  description: null
+  entrypoint: rca_data_tools/qaqc/pipeline.py:qaqc_pipeline_flow
+  parameters: {}
+  work_pool:
+    name: QAQC-default-workpool
+    work_queue_name: null
+    job_variables: {}
+  schedule: null
