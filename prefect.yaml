@@ -24,7 +24,7 @@ deployments:
   version: null
   tags: []
   description: null
-  entrypoint: rca_data_tools/qaqc/pipeline.py:qaqc_pipeline_flow
+  entrypoint: rca_data_tools/qaqc/flow.py:qaqc_pipeline_flow
   parameters: {}
   work_pool:
     name: QAQC-default-workpool
