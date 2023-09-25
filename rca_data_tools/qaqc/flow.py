@@ -1,6 +1,9 @@
 import datetime
+import pkg_resources
+
 from prefect import task, flow
 from prefect.states import Failed, Cancelled
+from prefect import get_run_logger
 
 from rca_data_tools.qaqc.plots import (
     instrument_dict,
@@ -79,6 +82,9 @@ def qaqc_pipeline_flow(
     sync_to_s3_param: bool=False,
     s3_bucket_param: str=S3_BUCKET,
     ):
+
+    logger = get_run_logger()
+    logger.info([p.project_name for p in pkg_resources.working_set]) 
 
     # Run dashboard creation task
     plotList = dashboard_creation_task(
