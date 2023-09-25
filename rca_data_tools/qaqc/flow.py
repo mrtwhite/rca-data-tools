@@ -29,22 +29,22 @@ def dashboard_creation_task(
         .replace('"', '')
         .split(',')
     )
-    try:
-        plotList = run_dashboard_creation(
-            site,
-            paramList,
-            timeString,
-            plotInstrument,
-            span,
-            threshold,
-            #logger,
-        )
-        return plotList
-    except Exception as e:
+
+    plotList = run_dashboard_creation(
+        site,
+        paramList,
+        timeString,
+        plotInstrument,
+        span,
+        threshold,
+        #logger,
+    )
+    return plotList
+    # except Exception as e:
         # raise prefect_signals.FAIL(
         #     message=f"PNG Creation Failed for {site}: {e}"
         # )
-        return Failed(message=f"PNG Creation Failed for {site}: {e}")
+        # return Failed(message=f"PNG Creation Failed for {site}: {e}")
         
 
 @task
