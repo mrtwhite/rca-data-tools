@@ -295,8 +295,8 @@ class QAQCPipeline:
         return {
             'site': self.site,
             'timeString': self.time,
-            'threshold': self.threshold,
             'span': self.span,
+            'threshold': self.threshold,
             'fs_kwargs': self.s3fs_kwargs,
             'sync_to_s3': self.s3_sync,
             's3_bucket': self.s3_bucket,
@@ -386,11 +386,15 @@ class QAQCPipeline:
         """
         Runs the flow either in the cloud or locally.
         """
+        from loguru import logger
+        logger.warning(f"parameters default at: {parameters}")
+
         if self.site is None:
             raise ValueError("No site found. Please provide site.")
         if parameters is None:
             parameters = self.flow_parameters
-
+    
+        logger.warning(f"parameters now set to: {parameters}!")
         if self.cloud_run is True:
             # create_flow_run.run(
             #     flow_name=self.flow.name,
@@ -402,114 +406,111 @@ class QAQCPipeline:
             run_name = "-".join([str(self.site), str(self.time), str(self.threshold), str(self.span), "FLOWRUN"])
             run_deployment(
                 name="qaqc-pipeline-flow/4vcpu_16gb",
-                # parameters={
-                #     "sync_to_s3_param": self.s3_sync, #TODO make this flexible/responsive to cli arguments
-                #     "s3_bucket_param": self.s3_bucket,
-                #     },
+                parameters=parameters,
                 flow_run_name=run_name,
                 timeout=10 #TODO timeout might need to be increase if we have race condition errors
             )
         else:
             qaqc_pipeline_flow()
 
-    def docker_storage_options( #TODO can this method be deprecated?
-        self,
-        registry_url=None,
-        image_name=None,
-        image_tag=None,
-        dockerfile=None,
-        prefect_directory=None,
-        python_dependencies=None,
-        **kwargs,
-    ) -> Dict[str, Any]:
-        """
-        Create default docker storage options dictionary
-        """
-        default_dependencies = [
-            'git+https://github.com/OOI-CabledArray/rca-data-tools.git@main'
-        ]
-        storage_options = {
-            'registry_url': self.image_info['registry']
-            if registry_url is None
-            else registry_url,
-            'image_name': self.image_info['repo']
-            if image_name is None
-            else image_name,
-            'image_tag': self.image_info['tag']
-            if image_tag is None
-            else image_tag,
-            'dockerfile': self.__dockerfile_path
-            if dockerfile is None
-            else dockerfile,
-            'prefect_directory': self.__prefect_directory
-            if prefect_directory is None
-            else prefect_directory,
-            'python_dependencies': default_dependencies
-            if python_dependencies is None
-            else python_dependencies,
-        }
-        return dict(**storage_options, **kwargs)
+    # def docker_storage_options( #TODO can this method be deprecated?
+    #     self,
+    #     registry_url=None,
+    #     image_name=None,
+    #     image_tag=None,
+    #     dockerfile=None,
+    #     prefect_directory=None,
+    #     python_dependencies=None,
+    #     **kwargs,
+    # ) -> Dict[str, Any]:
+    #     """
+    #     Create default docker storage options dictionary
+    #     """
+    #     default_dependencies = [
+    #         'git+https://github.com/OOI-CabledArray/rca-data-tools.git@main'
+    #     ]
+    #     storage_options = {
+    #         'registry_url': self.image_info['registry']
+    #         if registry_url is None
+    #         else registry_url,
+    #         'image_name': self.image_info['repo']
+    #         if image_name is None
+    #         else image_name,
+    #         'image_tag': self.image_info['tag']
+    #         if image_tag is None
+    #         else image_tag,
+    #         'dockerfile': self.__dockerfile_path
+    #         if dockerfile is None
+    #         else dockerfile,
+    #         'prefect_directory': self.__prefect_directory
+    #         if prefect_directory is None
+    #         else prefect_directory,
+    #         'python_dependencies': default_dependencies
+    #         if python_dependencies is None
+    #         else python_dependencies,
+    #     }
+    #     return dict(**storage_options, **kwargs)
 
-    def ecs_run_options( #TODO can this method also be deprecated?
+    # def ecs_run_options( #TODO can this method also be deprecated?
             
-        self,
-        cpu=None,
-        memory=None,
-        labels=None,
-        task_role_arn=None,
-        run_task_kwargs=None,
-        execution_role_arn=None,
-        env=None,
-        **kwargs,
-    ) -> Dict[str, Any]:
-        """
-        Create default ecs run configuration options dictionary
-        """
-        defaults = {
-            'cpu': '4 vcpu',
-            'memory': '30 GB',
-            'labels': ['rca', 'prod'],
-            'run_task_kwargs': {
-                'cluster': 'prefectECSCluster',
-                'launchType': 'FARGATE',
-                'tags': [
-                    {'key': 'Owner', 'value': 'RCA Data Team'},
-                    {'key': 'Name', 'value': 'QAQC Dashboard Pipeline'},
-                    {'key': 'Project', 'value': 'Regional Cabled Array'},
-                    {'key': 'Environment', 'value': 'prod'},
-                ],
-            },
-            'env': {
-                'GH_PAT': os.environ.get('GH_PAT', ''),
-                'AWS_KEY': os.environ.get('AWS_KEY', ''),
-                'AWS_SECRET': os.environ.get('AWS_SECRET', ''),
-                'PREFECT__CLOUD__HEARTBEAT_MODE': 'thread',
-                'AWS_RETRY_MODE': os.environ.get('AWS_RETRY_MODE', 'adaptive'),
-                'AWS_MAX_ATTEMPTS': os.environ.get('AWS_MAX_ATTEMPTS', '100'),
-            },
-        }
-        run_options = {
-            'env': defaults['env'] if env is None else env,
-            'cpu': defaults['cpu'] if cpu is None else cpu,
-            'memory': defaults['memory'] if memory is None else memory,
-            'labels': defaults['labels'] if labels is None else labels,
-            'task_role_arn': os.environ.get(
-                'TASK_ROLE_ARN',
-                '',
-            )
-            if task_role_arn is None
-            else task_role_arn,
-            'execution_role_arn': os.environ.get(
-                'EXECUTION_ROLE_ARN',
-                '',
-            )
-            if execution_role_arn is None
-            else execution_role_arn,
-            'run_task_kwargs': defaults['run_task_kwargs']
-            if run_task_kwargs is None
-            else run_task_kwargs,
-        }
-        return dict(**run_options, **kwargs)
+    #     self,
+    #     cpu=None,
+    #     memory=None,
+    #     labels=None,
+    #     task_role_arn=None,
+    #     run_task_kwargs=None,
+    #     execution_role_arn=None,
+    #     env=None,
+    #     **kwargs,
+    # ) -> Dict[str, Any]:
+    #     """
+    #     Create default ecs run configuration options dictionary
+    #     """
+    #     defaults = {
+    #         'cpu': '4 vcpu',
+    #         'memory': '30 GB',
+    #         'labels': ['rca', 'prod'],
+    #         'run_task_kwargs': {
+    #             'cluster': 'prefectECSCluster',
+    #             'launchType': 'FARGATE',
+    #             'tags': [
+    #                 {'key': 'Owner', 'value': 'RCA Data Team'},
+    #                 {'key': 'Name', 'value': 'QAQC Dashboard Pipeline'},
+    #                 {'key': 'Project', 'value': 'Regional Cabled Array'},
+    #                 {'key': 'Environment', 'value': 'prod'},
+    #             ],
+    #         },
+    #         'env': {
+    #             'GH_PAT': os.environ.get('GH_PAT', ''),
+    #             'AWS_KEY': os.environ.get('AWS_KEY', ''),
+    #             'AWS_SECRET': os.environ.get('AWS_SECRET', ''),
+    #             'PREFECT__CLOUD__HEARTBEAT_MODE': 'thread',
+    #             'AWS_RETRY_MODE': os.environ.get('AWS_RETRY_MODE', 'adaptive'),
+    #             'AWS_MAX_ATTEMPTS': os.environ.get('AWS_MAX_ATTEMPTS', '100'),
+    #         },
+    #     }
+    #     run_options = {
+    #         'env': defaults['env'] if env is None else env,
+    #         'cpu': defaults['cpu'] if cpu is None else cpu,
+    #         'memory': defaults['memory'] if memory is None else memory,
+    #         'labels': defaults['labels'] if labels is None else labels,
+    #         'task_role_arn': os.environ.get(
+    #             'TASK_ROLE_ARN',
+    #             '',
+    #         )
+    #         if task_role_arn is None
+    #         else task_role_arn,
+    #         'execution_role_arn': os.environ.get(
+    #             'EXECUTION_ROLE_ARN',
+    #             '',
+    #         )
+    #         if execution_role_arn is None
+    #         else execution_role_arn,
+    #         'run_task_kwargs': defaults['run_task_kwargs']
+    #         if run_task_kwargs is None
+    #         else run_task_kwargs,
+    #     }
+    #     return dict(**run_options, **kwargs)
 
 
 def parse_args():
@@ -563,23 +564,23 @@ def main():
                 pipeline.run()
             # Add 10s delay for each run
             time.sleep(10)
-    else:
-        # Creates only one pipeline
-        # This is used for registration or testing only
-        pipeline = QAQCPipeline(
-            site=args.site,
-            cloud_run=args.cloud,
-            s3_sync=args.s3_sync,
-            s3_bucket=args.s3_bucket,
-            time=args.time,
-            span=args.span,
-            threshold=args.threshold,
-        )
+    # else:
+    #     # Creates only one pipeline
+    #     # This is used for registration or testing only
+    #     pipeline = QAQCPipeline(
+    #         site=args.site,
+    #         cloud_run=args.cloud,
+    #         s3_sync=args.s3_sync,
+    #         s3_bucket=args.s3_bucket,
+    #         time=args.time,
+    #         span=args.span,
+    #         threshold=args.threshold,
+    #     )
 
-        if args.register is True:
-            # logger.info(f"Registering pipeline {pipeline.flow.name}.")
-            # register_flow(pipeline.flow)
-            logger.warning("Joe thinks this argument is no longer necessary")
+    #     if args.register is True:
+    #         # logger.info(f"Registering pipeline {pipeline.flow.name}.")
+    #         # register_flow(pipeline.flow)
+    #         logger.warning("Joe thinks this argument is no longer necessary")
 
-        if args.run is True:
-            pipeline.run()
+    #     if args.run is True:
+    #         pipeline.run()

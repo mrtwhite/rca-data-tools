@@ -76,17 +76,16 @@ now = datetime.datetime.utcnow()
 
 @flow
 def qaqc_pipeline_flow(
-    name: str='create dashboard',
     #run_config: dict=default_run_config, #TODO something like this for run configs?
-    site_param: str='CE02SHBP-LJ01D-06-CTDBPN106',
-    timeString_param: str=now.strftime('%Y-%m-%d'),
-    span_param: str='1',
-    threshold_param: int=1000000,
+    site: str,
+    timeString: str=now.strftime('%Y-%m-%d'),
+    span: str='1',
+    threshold: int=1000000,
     #logger_param
     # For organizing pngs
-    fs_kwargs_param: dict={},
-    sync_to_s3_param: bool=True,
-    s3_bucket_param: str=S3_BUCKET,
+    fs_kwargs: dict={},
+    sync_to_s3: bool=True,
+    s3_bucket: str=S3_BUCKET,
     ):
 
     logger = get_run_logger()
@@ -97,17 +96,17 @@ def qaqc_pipeline_flow(
 
     # Run dashboard creation task
     plotList = dashboard_creation_task(
-        site=site_param,
-        timeString=timeString_param,
-        span=span_param,
-        threshold=threshold_param,
+        site=site,
+        timeString=timeString,
+        span=span,
+        threshold=threshold,
         #logger=logger_param,
     )
 
     # Run organize pngs task
     organize_pngs_task(
         plotList=plotList,
-        sync_to_s3=sync_to_s3_param,
-        fs_kwargs=fs_kwargs_param,
-        s3_bucket=s3_bucket_param,
+        sync_to_s3=sync_to_s3,
+        fs_kwargs=fs_kwargs,
+        s3_bucket=s3_bucket,
     )
