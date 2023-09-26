@@ -487,7 +487,7 @@ def plotProfilesGrid(
 
     baseDS = paramData.sel(time=slice(startDate, endDate))
     ### drop nans from dataset
-    baseDS = baseDS.where( (baseDS[Yparam].notnull()) & (baseDS[pressParam].notnull()), drop=True)
+    baseDS = baseDS.where( ((baseDS[Yparam].notnull()) & (baseDS[pressParam].notnull())).compute(), drop=True)
     scatterX = baseDS.time.values
     scatterY = np.array([])
     scatterZ = np.array([])

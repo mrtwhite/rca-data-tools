@@ -403,7 +403,7 @@ class QAQCPipeline:
             #     run_config=self.run_config,
             #     run_name=self.name,
             # )
-            run_name = "-".join([str(self.site), str(self.time), str(self.threshold), str(self.span), "FLOWRUN"])
+            run_name = "-".join([str(self.site), str(self.time), str(self.threshold), str(self.span), "flow_run"])
             run_deployment(
                 name="qaqc-pipeline-flow/4vcpu_16gb",
                 parameters=parameters,
@@ -550,6 +550,7 @@ def main():
         # in prefect cloud.
         now = datetime.datetime.utcnow()
         for key in sites_dict.keys():
+            logger.info(f"creating pipeline instance for site: {key}")
             pipeline = QAQCPipeline(
                 site=key,
                 cloud_run=args.cloud,
