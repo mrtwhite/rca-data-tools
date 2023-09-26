@@ -408,6 +408,7 @@ class QAQCPipeline:
                 name="qaqc-pipeline-flow/4vcpu_16gb",
                 parameters=parameters,
                 flow_run_name=run_name,
+                timeout=10 #TODO timeout might need to be increase if we have race condition errors
             )
         else:
             qaqc_pipeline_flow()
