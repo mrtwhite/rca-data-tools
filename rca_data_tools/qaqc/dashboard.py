@@ -339,7 +339,7 @@ def plotProfilesGrid(
     ):
     ### QC check for grid...this will be replaced with a new range for "gross range"
     if 'pco2' in Yparam:
-        paramData = paramData.where((paramData[Yparam] < 2000), drop=True)
+        paramData = paramData.where((paramData[Yparam] < 2000).compute(), drop=True)
     #if 'par' in Yparam:
     #    paramData = paramData.where((paramData[Yparam] > 0) & (paramData[Yparam] < 2000), drop=True)
 
