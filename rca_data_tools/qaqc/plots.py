@@ -14,7 +14,7 @@ import gc
 import pandas as pd
 from pathlib import Path
 import xarray as xr
-from prefect import get_run_logger
+from loguru import logger
 
 from rca_data_tools.qaqc import dashboard
 from rca_data_tools.qaqc import decimate
@@ -22,7 +22,6 @@ from rca_data_tools.qaqc import decimate
 HERE = Path(__file__).parent.absolute()
 PARAMS_DIR = HERE.joinpath('params')
 PLOT_DIR = Path('QAQC_plots')
-logger = get_run_logger()
 
 selection_mapping = {
     'ctd-profiler': 'CTD-PROFILER',
