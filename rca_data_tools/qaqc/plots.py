@@ -17,7 +17,6 @@ import xarray as xr
 
 from rca_data_tools.qaqc import dashboard
 from rca_data_tools.qaqc import decimate
-from prefect import get_run_logger
 
 HERE = Path(__file__).parent.absolute()
 PARAMS_DIR = HERE.joinpath('params')
@@ -372,13 +371,9 @@ def run_dashboard_creation(
 def organize_pngs(
     sync_to_s3=False, bucket_name='qaqc.ooica.net', fs_kwargs={}
 ):
-    logger = get_run_logger()
 
     if sync_to_s3 is True:
-        logger.info("syncing to s3")
-        logger.info(f"Using these fs_kwargs {fs_kwargs}")
         import fsspec
-
         S3FS = fsspec.filesystem('s3', **fs_kwargs)
 
     for i in PLOT_DIR.iterdir():

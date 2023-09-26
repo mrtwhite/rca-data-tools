@@ -57,6 +57,12 @@ def organize_pngs_task(
     """
     Prefect task for organizing the plot pngs to their appropriate directories
     """
+    logger = get_run_logger
+    logger.info(f"plot list length {plotList}")
+    logger.info(f"sync_to_s3: {sync_to_s3}")
+    logger.info(f"s3_bucket: {S3_BUCKET}")
+    logger.info(f"fs_kwargs: {fs_kwargs}")
+
     if len(plotList) > 0:
         organize_pngs(
             sync_to_s3=sync_to_s3, fs_kwargs=fs_kwargs, bucket_name=s3_bucket
