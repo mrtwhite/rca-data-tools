@@ -402,7 +402,10 @@ class QAQCPipeline:
             run_name = "-".join([str(self.site), str(self.time), str(self.threshold), str(self.span), "FLOWRUN"])
             run_deployment(
                 name="qaqc-pipeline-flow/4vcpu_16gb",
-                #parameters=flow_params,
+                parameters={
+                    "sync_to_s3_param": self.s3_sync, #TODO double check this
+                    "s3_bucket_param": self.s3_bucket,
+                    },
                 flow_run_name=run_name,
                 timeout=10 #TODO timeout might need to be increase if we have race condition errors
             )
