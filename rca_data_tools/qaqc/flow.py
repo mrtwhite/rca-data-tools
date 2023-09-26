@@ -84,7 +84,11 @@ def qaqc_pipeline_flow(
     ):
 
     logger = get_run_logger()
-    logger.info([p.project_name for p in pkg_resources.working_set]) 
+
+    # log python package versions on cloud machine
+    installed_packages = {p.project_name: p.version for p in pkg_resources.working_set}
+    for package_name, package_version in installed_packages.items():
+        logger.info(f"{package_name}=={package_version}")
 
     # Run dashboard creation task
     plotList = dashboard_creation_task(
