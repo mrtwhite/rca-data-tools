@@ -85,7 +85,7 @@ def qaqc_pipeline_flow(
     #logger_param
     # For organizing pngs
     fs_kwargs_param: dict={},
-    sync_to_s3_param: bool=False,
+    sync_to_s3_param: bool=True,
     s3_bucket_param: str=S3_BUCKET,
     ):
 
