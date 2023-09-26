@@ -387,14 +387,13 @@ class QAQCPipeline:
         Runs the flow either in the cloud or locally.
         """
         from loguru import logger
-        logger.warning(f"parameters default at: {parameters}")
 
         if self.site is None:
             raise ValueError("No site found. Please provide site.")
         if parameters is None:
             parameters = self.flow_parameters
     
-        logger.warning(f"parameters now set to: {parameters}!")
+        logger.info(f"parameters set to: {parameters}!")
         if self.cloud_run is True:
             # create_flow_run.run(
             #     flow_name=self.flow.name,
