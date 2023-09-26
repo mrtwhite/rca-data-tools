@@ -1130,7 +1130,7 @@ def plotScatter(
                         print('paramters found for ',flagString)
                         flagStatus = {'fail':{'value':4,'color':'r'}, 'suspect':{'value':3,'color':'y'}}
                         for level in flagStatus.keys():
-                            flaggedDS = qcDS.where(qcDS[flagString] == flagStatus[level]['value'].compute(), drop=True)
+                            flaggedDS = qcDS.where((qcDS[flagString] == flagStatus[level]['value']).compute(), drop=True)
                             flag_X = flaggedDS.time.values
                             if len(flag_X) > 0:
                                 n = len(flag_X)
