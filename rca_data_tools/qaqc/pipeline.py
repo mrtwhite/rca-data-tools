@@ -23,8 +23,6 @@ from prefect.deployments import run_deployment
 
 from rca_data_tools.qaqc.plots import (
     instrument_dict,
-    organize_pngs,
-    run_dashboard_creation,
     sites_dict,
     span_dict,
 )
