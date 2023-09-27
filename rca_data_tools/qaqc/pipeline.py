@@ -46,10 +46,10 @@ class QAQCPipeline:
         time='2020-06-30',
         span='1',
         threshold=1_000_000,
-        cloud_run=False,
+        cloud_run=True,
         prefect_project_name='rca-qaqc',
         s3_bucket=S3_BUCKET,
-        s3_sync=False,
+        s3_sync=True,
         s3fs_kwargs={},
     ):
         self.site = site
