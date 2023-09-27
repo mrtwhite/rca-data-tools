@@ -149,7 +149,6 @@ HERE = Path(__file__).parent.absolute()
 
 #     """
     # now = datetime.datetime.utcnow()
-    # TODO: Add schedule so it can cron away!
     # with Flow(
     #     name, storage=storage, run_config=run_config, schedule=schedule
     # ) as flow:
@@ -176,12 +175,11 @@ HERE = Path(__file__).parent.absolute()
     #     )
 
 # now = datetime.datetime.utcnow()
-# default_run_config = {} #TODO something like this for run configs 
 
 # @flow
 # def qaqc_pipeline_flow(
 #     name: str='create dashboard',
-#     #run_config: dict=default_run_config, #TODO something like this for run configs?
+#     #run_config: dict=default_run_config,
 #     site_param: str='CE02SHBP-LJ01D-06-CTDBPN106',
 #     timeString_param: str=now.strftime('%Y-%m-%d'),
 #     span_param: str='1',

@@ -76,12 +76,10 @@ now = datetime.datetime.utcnow()
 
 @flow
 def qaqc_pipeline_flow(
-    #run_config: dict=default_run_config, #TODO something like this for run configs?
-    site: str,
+    site: str, #TODO determine compute resources based on site/stream
     timeString: str=now.strftime('%Y-%m-%d'),
     span: str='1',
     threshold: int=1000000,
-    #logger_param
     # For organizing pngs
     fs_kwargs: dict={},
     sync_to_s3: bool=True,
@@ -100,7 +98,6 @@ def qaqc_pipeline_flow(
         timeString=timeString,
         span=span,
         threshold=threshold,
-        #logger=logger_param,
     )
 
     # Run organize pngs task
