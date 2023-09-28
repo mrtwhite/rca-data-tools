@@ -371,12 +371,12 @@ def main():
             logger.info(f"creating pipeline instance for site: {key}")
             pipeline = QAQCPipeline(
                 site=key,
-                cloud_run=args.cloud,
-                s3_sync=args.s3_sync,
-                s3_bucket=args.s3_bucket,
                 time=now.strftime("%Y-%m-%d"),
                 span=args.span,
                 threshold=args.threshold,
+                cloud_run=args.cloud,
+                s3_bucket=args.s3_bucket,
+                s3_sync=args.s3_sync,
             )
             logger.info(f"{pipeline.name} created.")
             if args.run is True:
