@@ -214,14 +214,8 @@ class QAQCPipeline:
     
         logger.info(f"parameters set to: {parameters}!")
         if self.cloud_run is True:
-            # create_flow_run.run(
-            #     flow_name=self.flow.name,
-            #     project_name=PROJECT_NAME,
-            #     parameters=parameters,
-            #     run_config=self.run_config,
-            #     run_name=self.name,
-            # )
             run_name = "-".join([str(self.site), str(self.time), str(self.threshold), str(self.span), "flow_run"])
+            # IMPORTANT run_deployment determines the infrastructure and resources for each flow_run
             run_deployment(
                 name="qaqc-pipeline-flow/4vcpu_16gb",
                 parameters=parameters,
