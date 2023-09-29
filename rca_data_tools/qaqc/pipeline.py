@@ -184,7 +184,7 @@ class QAQCPipeline:
             run_name = "-".join([str(self.site), str(self.time), str(self.threshold), str(self.span), "flow_run"])
             # IMPORTANT run_deployment determines the infrastructure and resources for each flow_run
             run_deployment(
-                name="qaqc-pipeline-flow/4vcpu_16gb",
+                name="qaqc-pipeline-flow/4vcpu_30gb",
                 parameters=parameters,
                 flow_run_name=run_name,
                 timeout=10 #TODO timeout might need to be increase if we have race condition errors

@@ -7,10 +7,10 @@ name: rca-data-tools
 prefect-version: 2.11.5
 
 # build section allows you to manage and build docker images
-build: null
+build:
 
 # push section allows you to manage if and how this project is uploaded to remote locations
-push: null
+push:
 
 # pull section allows you to provide instructions for cloning this project in remote locations
 pull:
@@ -20,14 +20,14 @@ pull:
 
 # the deployments section allows you to provide configuration for deploying flows
 deployments:
-- name: 4vcpu_16gb
-  version: null
+- name: 4vcpu_30gb
+  version:
   tags: []
-  description: null
+  description:
   entrypoint: rca_data_tools/qaqc/flow.py:qaqc_pipeline_flow
   parameters: {}
   work_pool:
     name: QAQC-default-workpool
-    work_queue_name: null
+    work_queue_name:
     job_variables: {}
-  schedule: null
+  schedule:
