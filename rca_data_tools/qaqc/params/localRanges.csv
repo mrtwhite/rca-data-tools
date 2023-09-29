@@ -31,7 +31,7 @@ CE02SHBP-LJ01D-10-PHSEND103,,,,,,,,,"{'local':[7,9]}",,,,,,,,,,
 CE04OSBP-LJ01C-10-PHSEND107,,,,,,,,,"{'local':[7.4,8]}",,,,,,,,,,
 CE04OSPS-SF01B-3D-SPKIRA102,,,,,,,,,,"{'local_profile':[0,18]}","{'local_profile':[0,30]}","{'local_profile':[0,39]}","{'local_profile':[0,34]}","{'local_profile':[0,24]}","{'local_profile':[0,2]}","{'local_profile':[0,0.5]}",,,
 RS01SBPS-SF01A-3D-SPKIRA101,,,,,,,,,,,,,,,,,,,
-RS03AXPS-SF03A-3D-SPKIRA301,,,,,,,,,,"{'local_profile':[0,10]}","{'local_profile':[0,15]}","{'local_profile':[0,21]}","{'local_profile':[0,20]}","{'local_profile':[0,12]}","{'local_profile':[0,2.25]}","{'local_profile':[0,1}",,,
+RS03AXPS-SF03A-3D-SPKIRA301,,,,,,,,,,"{'local_profile':[0,10]}","{'local_profile':[0,15]}","{'local_profile':[0,21]}","{'local_profile':[0,20]}","{'local_profile':[0,12]}","{'local_profile':[0,2.25]}","{'local_profile':[0,1]}",,,
 CE04OSPS-SF01B-4B-VELPTD106,,,,,,,,,,,,,,,,,"{'local_profile':[-2.5,2.5]}","{'local_profile':[-2.5,2.5]}","{'local_profile':[-4,4]}"
 RS01SBPS-SF01A-4B-VELPTD102,,,,,,,,,,,,,,,,,"{'local_profile':[-1.6,1.6]}","{'local_profile':[-1.6,2]}","{'local_profile':[-2,1.6]}"
 RS03AXPS-SF03A-4B-VELPTD302,,,,,,,,,,,,,,,,,"{'local_profile':[-1.25,1.25]}","{'local_profile':[-1,1]}","{'local_profile':[-1.4,1.8]}"
