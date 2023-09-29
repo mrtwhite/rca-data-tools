@@ -21,6 +21,7 @@ import requests
 import s3fs
 import statistics as st
 import xarray as xr
+from loguru import logger
 
 
 import matplotlib.pyplot as plt
@@ -338,7 +339,7 @@ def plotProfilesGrid(
     ):
     ### QC check for grid...this will be replaced with a new range for "gross range"
     if 'pco2' in Yparam:
-        paramData = paramData.where((paramData[Yparam] < 2000), drop=True)
+        paramData = paramData.where((paramData[Yparam] < 2000).compute(), drop=True)
     #if 'par' in Yparam:
     #    paramData = paramData.where((paramData[Yparam] > 0) & (paramData[Yparam] < 2000), drop=True)
 
@@ -486,7 +487,7 @@ def plotProfilesGrid(
 
     baseDS = paramData.sel(time=slice(startDate, endDate))
     ### drop nans from dataset
-    baseDS = baseDS.where( (baseDS[Yparam].notnull()) & (baseDS[pressParam].notnull()), drop=True)
+    baseDS = baseDS.where( ((baseDS[Yparam].notnull()) & (baseDS[pressParam].notnull())).compute(), drop=True)
     scatterX = baseDS.time.values
     scatterY = np.array([])
     scatterZ = np.array([])
@@ -1129,7 +1130,7 @@ def plotScatter(
                         print('paramters found for ',flagString)
                         flagStatus = {'fail':{'value':4,'color':'r'}, 'suspect':{'value':3,'color':'y'}}
                         for level in flagStatus.keys():
-                            flaggedDS = qcDS.where(qcDS[flagString] == flagStatus[level]['value'], drop=True)
+                            flaggedDS = qcDS.where((qcDS[flagString] == flagStatus[level]['value']).compute(), drop=True)
                             flag_X = flaggedDS.time.values
                             if len(flag_X) > 0:
                                 n = len(flag_X)

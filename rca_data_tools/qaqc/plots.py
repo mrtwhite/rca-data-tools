@@ -127,14 +127,16 @@ def run_dashboard_creation(
     plotInstrument,
     span,
     decimationThreshold,
-    logger=None,
+    #logger=None,
 ):
-    if logger == 'prefect':
-        import prefect
+    # if logger == 'prefect':
+    #     import prefect
 
-        logger = prefect.context.get("logger")
-    else:
-        from loguru import logger
+    #     logger = prefect.context.get("logger")
+    # else:
+    #     from loguru import logger
+    from prefect import get_run_logger
+    logger = get_run_logger()
 
     if isinstance(timeRef, str):
         timeRef = parser.parse(timeRef)
@@ -369,9 +371,9 @@ def run_dashboard_creation(
 def organize_pngs(
     sync_to_s3=False, bucket_name='qaqc.ooica.net', fs_kwargs={}
 ):
+
     if sync_to_s3 is True:
         import fsspec
-
         S3FS = fsspec.filesystem('s3', **fs_kwargs)
 
     for i in PLOT_DIR.iterdir():
