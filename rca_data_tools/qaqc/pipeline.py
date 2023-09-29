@@ -1,24 +1,20 @@
 # -*- coding: utf-8 -*-
 """pipeline.py
 
-This module has been adapted to build prefect 2 flows. 
+This module contains the qaqc_pipeline entry point: main() and the QAQCPipeline
+class. This class interfaces with the cli entry point to orchestrate a pipeline 
+with prefect 2 which uses the zarr files in the ooi-data-prod s3 bucket to generate 
+plots as pngs. These plots are viewable throug the frontend web app in QAQC_dashboard.
+
+Prefect 2 @flow and @task decorated functions are found in flow.py
 
 """
 import datetime
-import os
-from typing import Dict, Tuple, Optional, Any
-import warnings
+from typing import Dict
 import argparse
 import time
 from pathlib import Path
-from prefect import task, flow
-#from prefect.storage import Docker
-#from prefect.run_configs import ECSRun
-#from prefect.tasks.prefect import create_flow_run
-#import prefect.engine.signals as prefect_signals
 
-# ** PREFECT 2 **
-from prefect.states import Failed, Cancelled
 from prefect.deployments import run_deployment
 
 from rca_data_tools.qaqc.plots import (
@@ -38,7 +34,6 @@ class QAQCPipeline:
 
     """
     __dockerfile_path = HERE / "docker" / "Dockerfile" #TODO is this necessary?
-    __prefect_directory = "/home/jovyan/prefect"
 
     def __init__(
         self,
@@ -63,8 +58,8 @@ class QAQCPipeline:
         self.s3fs_kwargs = s3fs_kwargs
         self._site_ds = {}
 
-        self.__setup() #TODO
-        #self.__setup_flow() #TODO
+        self.__setup()
+        #self.__setup_flow()
 
     def __setup(self):
         self.created_dt = datetime.datetime.utcnow()
@@ -143,30 +138,6 @@ class QAQCPipeline:
         """
         return self.__dockerfile_path.read_text(encoding='utf-8')
 
-    # @property
-    # def storage(self):
-    #     """
-    #     Docker Storage Option
-    #     """
-    #     if self.cloud_run is True:
-    #         storage_options = self.docker_storage_options()
-    #         return Docker(**storage_options)
-    #     return
-
-    # @property
-    # def run_config(self):
-    #     """
-    #     ECS Run Configuration
-    #     """
-    #     if self.cloud_run is True:
-    #         # NOTE: As of 4/28/2022 instance resources is not used at this time
-    #         resources = self._parse_resources()
-    #         run_config = self.ecs_run_options(
-    #             cpu=resources.get('cpu', None),
-    #             memory=resources.get('memory', None),
-    #         )
-    #         return ECSRun(**run_config)
-    #     return
 
     @staticmethod
     def _get_resource_values(resource: str) -> Dict:
@@ -196,10 +167,6 @@ class QAQCPipeline:
             'instance': instance_spans.get(self.span, None),
         }
 
-    # def __setup_flow(self):
-    #     self.flow = create_flow()
-    #     self.flow.storage = self.storage
-    #     self.flow.run_config = self.run_config
 
     def run(self, parameters=None):
         """
@@ -224,105 +191,6 @@ class QAQCPipeline:
             )
         else:
             qaqc_pipeline_flow()
-
-    # def docker_storage_options( #TODO can this method be deprecated?
-    #     self,
-    #     registry_url=None,
-    #     image_name=None,
-    #     image_tag=None,
-    #     dockerfile=None,
-    #     prefect_directory=None,
-    #     python_dependencies=None,
-    #     **kwargs,
-    # ) -> Dict[str, Any]:
-    #     """
-    #     Create default docker storage options dictionary
-    #     """
-    #     default_dependencies = [
-    #         'git+https://github.com/OOI-CabledArray/rca-data-tools.git@main'
-    #     ]
-    #     storage_options = {
-    #         'registry_url': self.image_info['registry']
-    #         if registry_url is None
-    #         else registry_url,
-    #         'image_name': self.image_info['repo']
-    #         if image_name is None
-    #         else image_name,
-    #         'image_tag': self.image_info['tag']
-    #         if image_tag is None
-    #         else image_tag,
-    #         'dockerfile': self.__dockerfile_path
-    #         if dockerfile is None
-    #         else dockerfile,
-    #         'prefect_directory': self.__prefect_directory
-    #         if prefect_directory is None
-    #         else prefect_directory,
-    #         'python_dependencies': default_dependencies
-    #         if python_dependencies is None
-    #         else python_dependencies,
-    #     }
-    #     return dict(**storage_options, **kwargs)
-
-    # def ecs_run_options( #TODO can this method also be deprecated?
-            
-    #     self,
-    #     cpu=None,
-    #     memory=None,
-    #     labels=None,
-    #     task_role_arn=None,
-    #     run_task_kwargs=None,
-    #     execution_role_arn=None,
-    #     env=None,
-    #     **kwargs,
-    # ) -> Dict[str, Any]:
-    #     """
-    #     Create default ecs run configuration options dictionary
-    #     """
-    #     defaults = {
-    #         'cpu': '4 vcpu',
-    #         'memory': '30 GB',
-    #         'labels': ['rca', 'prod'],
-    #         'run_task_kwargs': {
-    #             'cluster': 'prefectECSCluster',
-    #             'launchType': 'FARGATE',
-    #             'tags': [
-    #                 {'key': 'Owner', 'value': 'RCA Data Team'},
-    #                 {'key': 'Name', 'value': 'QAQC Dashboard Pipeline'},
-    #                 {'key': 'Project', 'value': 'Regional Cabled Array'},
-    #                 {'key': 'Environment', 'value': 'prod'},
-    #             ],
-    #         },
-    #         'env': {
-    #             'GH_PAT': os.environ.get('GH_PAT', ''),
-    #             'AWS_KEY': os.environ.get('AWS_KEY', ''),
-    #             'AWS_SECRET': os.environ.get('AWS_SECRET', ''),
-    #             'PREFECT__CLOUD__HEARTBEAT_MODE': 'thread',
-    #             'AWS_RETRY_MODE': os.environ.get('AWS_RETRY_MODE', 'adaptive'),
-    #             'AWS_MAX_ATTEMPTS': os.environ.get('AWS_MAX_ATTEMPTS', '100'),
-    #         },
-    #     }
-    #     run_options = {
-    #         'env': defaults['env'] if env is None else env,
-    #         'cpu': defaults['cpu'] if cpu is None else cpu,
-    #         'memory': defaults['memory'] if memory is None else memory,
-    #         'labels': defaults['labels'] if labels is None else labels,
-    #         'task_role_arn': os.environ.get(
-    #             'TASK_ROLE_ARN',
-    #             '',
-    #         )
-    #         if task_role_arn is None
-    #         else task_role_arn,
-    #         'execution_role_arn': os.environ.get(
-    #             'EXECUTION_ROLE_ARN',
-    #             '',
-    #         )
-    #         if execution_role_arn is None
-    #         else execution_role_arn,
-    #         'run_task_kwargs': defaults['run_task_kwargs']
-    #         if run_task_kwargs is None
-    #         else run_task_kwargs,
-    #     }
-    #     return dict(**run_options, **kwargs)
 
 
 def parse_args():
@@ -377,23 +245,18 @@ def main():
                 pipeline.run()
             # Add 10s delay for each run
             time.sleep(10)
-    # else:
-    #     # Creates only one pipeline
-    #     # This is used for registration or testing only
-    #     pipeline = QAQCPipeline(
-    #         site=args.site,
-    #         cloud_run=args.cloud,
-    #         s3_sync=args.s3_sync,
-    #         s3_bucket=args.s3_bucket,
-    #         time=args.time,
-    #         span=args.span,
-    #         threshold=args.threshold,
-    #     )
+    else:
+        # Creates only one pipeline
+        # This may be useful for testing
+        pipeline = QAQCPipeline(
+            site=args.site,
+            time=args.time,
+            span=args.span,
+            threshold=args.threshold,
+            cloud_run=args.cloud,
+            s3_bucket=args.s3_bucket,
+            s3_sync=args.s3_sync,
+        )
 
-    #     if args.register is True:
-    #         # logger.info(f"Registering pipeline {pipeline.flow.name}.")
-    #         # register_flow(pipeline.flow)
-    #         logger.warning("Joe thinks this argument is no longer necessary")
-
-    #     if args.run is True:
-    #         pipeline.run()
+        if args.run is True:
+            pipeline.run()
