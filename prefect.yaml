@@ -31,3 +31,16 @@ deployments:
     work_queue_name:
     job_variables: {}
   schedule:
+- name: 8vcpu_48gb
+  version:
+  tags: []
+  description:
+  entrypoint: rca_data_tools/qaqc/flow.py:qaqc_pipeline_flow
+  parameters: {}
+  work_pool:
+    name: QAQC-default-workpool
+    work_queue_name:
+    job_variables:
+      cpu: 8192
+      memory: 49152
+  schedule:
