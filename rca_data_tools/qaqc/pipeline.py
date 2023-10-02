@@ -22,6 +22,7 @@ from rca_data_tools.qaqc.plots import (
     sites_dict,
     span_dict,
 )
+from rca_data_tools.qaqc.compute_constants import COMPUTE_EXCEPTIONS
 from rca_data_tools.qaqc.flow import qaqc_pipeline_flow, S3_BUCKET
 
 HERE = Path(__file__).parent.absolute()
@@ -183,12 +184,24 @@ class QAQCPipeline:
         if self.cloud_run is True:
             run_name = "-".join([str(self.site), str(self.time), str(self.threshold), str(self.span), "flow_run"])
             # IMPORTANT run_deployment determines the infrastructure and resources for each flow_run
-            run_deployment(
-                name="qaqc-pipeline-flow/4vcpu_30gb",
-                parameters=parameters,
-                flow_run_name=run_name,
-                timeout=10 #TODO timeout might need to be increase if we have race condition errors
-            )
+            if self.site in COMPUTE_EXCEPTIONS and self.span in COMPUTE_EXCEPTIONS[self.site]:
+
+                deployment_name = f"qaqc-pipeline-flow/{COMPUTE_EXCEPTIONS[self.site][self.span]}"
+                logger.warning(f"{self.site} with span {self.span} requires additional compute resources, creating flow_run from {deployment_name} instead of default")
+                run_deployment(
+                    name=deployment_name,
+                    parameters=parameters,
+                    flow_run_name=run_name,
+                    timeout=10
+                )
+            # otherwise run the default deployment with default compute resources        
+            else:
+                run_deployment(
+                    name="qaqc-pipeline-flow/4vcpu_30gb",
+                    parameters=parameters,
+                    flow_run_name=run_name,
+                    timeout=10 #TODO timeout might need to be increase if we have race condition errors
+                )
         else:
             qaqc_pipeline_flow()
 
@@ -257,6 +270,7 @@ def main():
             s3_bucket=args.s3_bucket,
             s3_sync=args.s3_sync,
         )
+        logger.info(f"{pipeline.name} created")
 
         if args.run is True:
             pipeline.run()
