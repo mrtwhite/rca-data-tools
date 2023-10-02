@@ -136,3 +136,6 @@ version.py
 
 # Docs
 _build
+
+#mac os 
+.DS_store
