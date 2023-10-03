@@ -10,6 +10,7 @@ This module contains code for creating pngs to feed into the QAQC dashboard.
 #matplotlib.use("TkAgg")
 
 import ast
+from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from dateutil import parser
 import gc
@@ -17,6 +18,7 @@ import io
 import json
 import numpy as np
 import pandas as pd
+import re
 import requests
 import s3fs
 import statistics as st
@@ -192,17 +194,33 @@ def loadProfiles(refDes):
     profileList = []
     dateColumns = ['start','peak','end']
     (site, node, sensor1, sensor2) = refDes.split('-')
+    # URL on the Github where the csv files are stored
+    github_url = 'https://github.com/OOI-CabledArray/profileIndices/' 
     gh_baseURL = 'https://raw.githubusercontent.com/OOI-CabledArray/profileIndices/main/'
-    profiles_URL = gh_baseURL + site + '_profiles.csv'
-    download = requests.get(profiles_URL)
-    if download.status_code == 200:
-        profileList = pd.read_csv(io.StringIO(download.content.decode('utf-8')),parse_dates=dateColumns)
-    else:
-        logger.warning(
-            f"error retrieving profileIndices for {site}"
-        )
+
+    page = requests.get(github_url).text
+    soup = BeautifulSoup(page, 'html.parser')
+    csvfiles = soup.find_all(title=re.compile("{}_profiles_.*\.csv$".format(site)))
+    
+    fileNames = []
+    for i in csvfiles:
+        fileNames.append(i.extract().get_text())
+
+    profiles_partial = []
+    for file in fileNames:
+        profiles_URL = gh_baseURL + file
+        download = requests.get(profiles_URL)
+        if download.status_code == 200:
+            data = pd.read_csv(io.StringIO(download.content.decode('utf-8')),parse_dates=dateColumns)
+            profiles_partial.append(data)
+
+    profileList = pd.concat(profiles_partial, ignore_index=True)
+    profileList = profileList.sort_values('start')
     
     return profileList
+
+
+
 
 def loadQARTOD(refDes, param, sensorType, logger=None):
 
