@@ -256,8 +256,8 @@ def main():
             logger.info(f"{pipeline.name} created.")
             if args.run is True:
                 pipeline.run()
-            # Add 10s delay for each run
-            time.sleep(10)
+            # Add 20s delay for each run
+            time.sleep(20)
     else:
         # Creates only one pipeline
         # This may be useful for testing
