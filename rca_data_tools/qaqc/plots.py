@@ -158,10 +158,13 @@ def run_dashboard_creation(
     qcStrings = ['_qartod_','_qc_']
     qcParams = [var for var in allVar if any(sub in var for sub in fileParams) if any(qc in var for qc in qcStrings)]
     qcParams = [var for var in qcParams if 'qartod_executed' not in var]
+    logger.warning(f"qc params {qcParams}")
     fileParams = fileParams + qcParams
     # drop un-used variables from dataset
     dropList = [item for item in allVar if item not in fileParams]
+    logger.warning(f"drop list{dropList}")
     siteData = siteData.drop(dropList)
+    logger.warning(f"site date:{siteData}")
     # extract parameters from multi-dimensional array
     if plotInstrument in multiParameter_dict.keys():
         siteData, fileParams = extractMulti(
