@@ -193,7 +193,10 @@ def loadProfiles(refDes):
 
     profileList = []
     dateColumns = ['start','peak','end']
-    (site, node, sensor1, sensor2) = refDes.split('-')
+    if len(refDes) > 8:
+        (site, node, sensor1, sensor2) = refDes.split('-')
+    else:
+        site = refDes
     # URL on the Github where the csv files are stored
     github_url = 'https://github.com/OOI-CabledArray/profileIndices/' 
     gh_baseURL = 'https://raw.githubusercontent.com/OOI-CabledArray/profileIndices/main/'
@@ -241,6 +244,13 @@ def loadQARTOD(refDes, param, sensorType, logger=None):
     (site, node, sensor1, sensor2) = refDes.split('-')
     sensor = sensor1 + '-' + sensor2
 
+    # if parameter is oxygen sensor in ctd stream, replace sensor type
+    if sensorType == 'ctdpf' and 'oxygen' in param:
+        if 'SF' in node:
+            sensorType = 'dofst'
+        else:
+            sensorType = 'dosta'
+
     # Load climatology and gross range values
 
     githubBaseURL = 'https://raw.githubusercontent.com/oceanobservatories/qc-lookup/master/qartod/'
@@ -270,6 +280,7 @@ def loadQARTOD(refDes, param, sensorType, logger=None):
             (df_grossRange.subsite == site)
             & (df_grossRange.node == node)
             & (df_grossRange.sensor == sensor)
+            & (df_grossRange.parameters.str.contains(param))
         ]
         qcConfig_json = qcConfig.values[0].replace("'", "\"")
         grossRange_dict = json.loads(qcConfig_json)
