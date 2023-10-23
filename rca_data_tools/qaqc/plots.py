@@ -239,7 +239,7 @@ def run_dashboard_creation(
                     paramData = siteData[[Yparam, pressParam]].chunk('auto')
                     flagParams = [item for item in qcParams if Yparam in item]
                     flagParams.extend((Yparam, pressParam))
-                    overlayData_flag = siteData[flagParams].chunk('auto')
+                    overlayData_flag = siteData[flagParams].chunk({'time': 500000})
                     colorMap = 'cmo.' + variable_paramDict[param]['colorMap']
                     depthMinMax = (
                         sites_dict[site]['depthMinMax'].strip('"').split(',')
