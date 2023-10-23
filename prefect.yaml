@@ -16,7 +16,7 @@ push:
 pull:
 - prefect.deployments.steps.git_clone:
     repository: https://github.com/OOI-CabledArray/rca-data-tools.git
-    branch: prefect2_migration
+    branch: main
 
 # the deployments section allows you to provide configuration for deploying flows
 deployments:
