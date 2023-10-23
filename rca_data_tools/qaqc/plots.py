@@ -157,6 +157,7 @@ def run_dashboard_creation(
     # add qartod and qc flags to fileParams list
     qcStrings = ['_qartod_','_qc_']
     qcParams = [var for var in allVar if any(sub in var for sub in fileParams) if any(qc in var for qc in qcStrings)]
+    qcParams = [var for var in qcParams if 'qartod_executed' not in var]
     fileParams = fileParams + qcParams
     # drop un-used variables from dataset
     dropList = [item for item in allVar if item not in fileParams]
@@ -239,7 +240,7 @@ def run_dashboard_creation(
                     paramData = siteData[[Yparam, pressParam]].chunk('auto')
                     flagParams = [item for item in qcParams if Yparam in item]
                     flagParams.extend((Yparam, pressParam))
-                    overlayData_flag = siteData[flagParams].chunk({'time': 500000})
+                    overlayData_flag = siteData[flagParams].chunk('auto')
                     colorMap = 'cmo.' + variable_paramDict[param]['colorMap']
                     depthMinMax = (
                         sites_dict[site]['depthMinMax'].strip('"').split(',')
