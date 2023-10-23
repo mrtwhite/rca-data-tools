@@ -1,13 +1,45 @@
 [build-system]
-requires = [
-    "setuptools <61",
-    "setuptools_scm[toml] >= 4, <6",
-    "setuptools_scm_git_archive",
-    "wheel >= 0.29.0",
-]
-build-backend = 'setuptools.build_meta'
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.setuptools_scm]
-fallback_version = "unknown"
-local_scheme = "node-and-date"
-write_to = "rca_data_tools/version.py"
+[project]
+name = "rca_data_tools"
+version = "1.0.0"
+description = "Utilities for working with Regional Cabled Array Data."
+authors = [
+  { name = "RCA Data Team", email = "jduprey@uw.edu" },
+]
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "bs4",
+    "cmocean",
+    "dask",
+    "fsspec",
+    "gspread",
+    "loguru",
+    "matplotlib",
+    "netcdf4",
+    "numba",
+    "numpy",
+    "pandas<2",
+    "pathlib",
+    "prefect>2",
+    "prefect-aws",
+    "requests",
+    "s3fs",
+    "scipy",
+    "xarray",
+    "zarr",
+]
+
+[project.scripts]
+    create_dashboard = "rca_data_tools.qaqc.plots:main"
+    generate_hitl_tables = "rca_data_tools.qaqc.notes:main"
+    qaqc_pipeline = "rca_data_tools.qaqc.pipeline:main"
+    qaqc_index = "rca_data_tools.qaqc.index:main"
