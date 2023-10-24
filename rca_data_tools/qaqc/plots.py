@@ -17,6 +17,7 @@ import xarray as xr
 
 from rca_data_tools.qaqc import dashboard
 from rca_data_tools.qaqc import decimate
+from rca_data_tools.qaqc.utils import coerce_qartod_executed_to_int
 
 HERE = Path(__file__).parent.absolute()
 PARAMS_DIR = HERE.joinpath('params')
@@ -127,14 +128,7 @@ def run_dashboard_creation(
     plotInstrument,
     span,
     decimationThreshold,
-    #logger=None,
 ):
-    # if logger == 'prefect':
-    #     import prefect
-
-    #     logger = prefect.context.get("logger")
-    # else:
-    #     from loguru import logger
     from prefect import get_run_logger
     logger = get_run_logger()
 
@@ -152,19 +146,21 @@ def run_dashboard_creation(
     spanString = span_dict[span]
     # load data for site
     siteData = dashboard.loadData(site, sites_dict)
+
+    logger.info("Coercing `qartod_executed` to int for each test, then drop original variable.")
+    siteData = coerce_qartod_executed_to_int(siteData)
+
     fileParams = sites_dict[site]['dataParameters'].strip('"').split(',')
     allVar = list(siteData.keys())
     # add qartod and qc flags to fileParams list
     qcStrings = ['_qartod_','_qc_']
     qcParams = [var for var in allVar if any(sub in var for sub in fileParams) if any(qc in var for qc in qcStrings)]
-    qcParams = [var for var in qcParams if 'qartod_executed' not in var]
-    logger.warning(f"qc params {qcParams}")
     fileParams = fileParams + qcParams
     # drop un-used variables from dataset
     dropList = [item for item in allVar if item not in fileParams]
-    logger.warning(f"drop list{dropList}")
     siteData = siteData.drop(dropList)
-    logger.warning(f"site date:{siteData}")
+
+    logger.info(f"site date array: {siteData}")
     # extract parameters from multi-dimensional array
     if plotInstrument in multiParameter_dict.keys():
         siteData, fileParams = extractMulti(
