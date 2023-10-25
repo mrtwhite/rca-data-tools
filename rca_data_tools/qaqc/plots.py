@@ -130,7 +130,11 @@ def run_dashboard_creation(
     decimationThreshold,
 ):
     from prefect import get_run_logger
-    logger = get_run_logger()
+    try:
+        logger = get_run_logger()
+    except:
+        print('Could not start prefect logger...running local log')
+        from loguru import logger
 
     if isinstance(timeRef, str):
         timeRef = parser.parse(timeRef)

@@ -1150,12 +1150,13 @@ def plotScatter(
                     plt.plot(scatterX, scatterY, ',', color=lineColors[0], label='%s' % legendString,)
                 # slice overlayData_flag
                 qcDS = overlayData_flag.sel(time=slice(startDate, endDate))
+                print(qcDS)
                 # retrieve flags
                 qcDS = retrieve_qc(qcDS)
                 flags = {
-                    ##'qartod_grossRange':{'symbol':'+', 'param':'_qartod_gr_flag'},
-                    ##'qartod_climatology':{'symbol':'x','param':'_qartod_cl_flag'},
-                    'qartod_summary':{'symbol':'1','param':'_qartod_results'},
+                    'qartod_grossRange':{'symbol':'+', 'param':'_qartod_executed_gross_range_test'},
+                    'qartod_climatology':{'symbol':'x','param':'_qartod_executed_climatology_test'},
+                    #'qartod_summary':{'symbol':'1','param':'_qartod_results'},
                     'qc':{'symbol':'s','param':'_qc_summary_flag'},
                 }
                 for flagType in flags.keys():
@@ -1293,19 +1294,19 @@ def retrieve_qc(ds):
         # add the qc_flags to the dataset, rolling up the results into a single value
         ds[qc_summary] = ('time', flags.max(axis=1, initial=1).astype(np.int32))
 
-    # create a list of the variables that have had QARTOD tests applied
-    variables = [x.split('_qartod_executed')[0] for x in ds.variables if 'qartod_executed' in x]
+    ## create a list of the variables that have had QARTOD tests applied
+    ##variables = [x.split('_qartod_executed')[0] for x in ds.variables if 'qartod_executed' in x]
 
-    # for each variable with qc tests applied
-    for var in variables:
-        qartodString = var + '_qartod_executed'
-        flagNameBase = var + '_qartod_'
-        testOrder = ds[qartodString][0].tests_executed.strip("'").replace(" ","").split(',')
-        for i in range(0, len(testOrder)):
-            flagString = testOrder[i]
-            flagIndex = testOrder.index(flagString)
-            flagName = flagNameBase + flagString
-            ds[flagName] = [int(i[flagIndex]) for i in ds[qartodString].values.tolist()]
+    ### for each variable with qc tests applied
+    ##for var in variables:
+    ##    qartodString = var + '_qartod_executed'
+    ##    flagNameBase = var + '_qartod_'
+    ##    testOrder = ds[qartodString][0].tests_executed.strip("'").replace(" ","").split(',')
+    ##    for i in range(0, len(testOrder)):
+    ##        flagString = testOrder[i]
+    ##        flagIndex = testOrder.index(flagString)
+    ##        flagName = flagNameBase + flagString
+    ##        ds[flagName] = [int(i[flagIndex]) for i in ds[qartodString].values.tolist()]
 
     return ds
 
