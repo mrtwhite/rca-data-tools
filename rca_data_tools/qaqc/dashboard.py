@@ -797,6 +797,355 @@ def plotProfilesGrid(
     return fileNameList
 
 
+
+
+
+def plotProfilesScatter(
+    Yparam,
+    pressParam,
+    paramData,
+    plotTitle,
+    timeRef,
+    profile_paramMin,
+    profile_paramMax,
+    profile_paramMin_local,
+    profile_paramMax_local,
+    colorMap,
+    fileName_base,
+    overlayData_clim,
+    overlayData_near,
+    span,
+    spanString,
+    profileList,
+    statusDict,
+    site,
+    ):
+  
+    # Plot Overlays
+    overlays = ['clim', 'flag', 'near', 'time', 'none']
+
+    # Data Ranges
+    ranges = ['full', 'standard', 'local']
+    
+    # Descent Sensors
+    descentSamples = ['pco2_seawater','ph_seawater']
+    
+    # Drop nans
+    paramData = paramData.where(paramData[Yparam].notnull(),drop=True)
+    
+    # yLabel
+    yLabel = 'pressure, m'
+    
+    if Yparam in descentSamples:
+        profileStart = 'peak'
+        profileEnd = 'end'
+    else:
+        profileStart = 'start'
+        profileEnd = 'peak'
+
+    unix_epoch = np.datetime64(0, 's')
+    one_second = np.timedelta64(1, 's')
+
+    statusString = statusDict[site]
+    statusColors = {'OPERATIONAL': 'green',
+                'FAILED': 'red',
+                'TROUBLESHOOTING': 'red',
+                'OFFLINE': 'blue',
+                'UNCABLED': 'blue',
+                'DATA_QUALITY': 'red',
+                'NOT_DEPLOYED': 'blue'
+                }
+
+
+
+    def setPlot():
+
+        plt.close('all')
+        plt.rcParams["font.family"] = "serif"
+
+        fig, ax = plt.subplots()
+        fig.set_size_inches(4, 2)
+        fig.patch.set_facecolor('white')
+        plt.title(plotTitle, fontsize=4, loc='left')
+        plt.title(statusString, fontsize=4, fontweight=0, color=statusColors[statusString], loc='right', style='italic' )
+        plt.ylabel(yLabel, fontsize=4)
+        ax.tick_params(direction='out', length=2, width=0.5, labelsize=4)
+        ax.ticklabel_format(useOffset=False)
+        
+        ax.grid(False)
+        return (fig, ax)
+
+
+    print('plotting profiles for timeSpan: ', span)
+    profileIterator = 0    
+    if profileList.empty:
+        print('profileList empty...cannot create profile scatter plots')
+        fig,ax = setPlot()
+        plt.annotate(
+            'No Profile Indices Available', xy=(0.3, 0.5), xycoords='axes fraction'
+        )
+        fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
+        fig.savefig(fileName + '_full.png', dpi=300)
+        fig.savefig(fileName + '_standard.png', dpi=300)
+        fig.savefig(fileName + '_local.png', dpi=300)
+
+    else:
+        if 'deploy' in spanString:
+            deployHistory = loadDeploymentHistory(site)
+            deployTimes = listDeployTimes(deployHistory[site])
+
+            timeRef_deploy = deployTimes[0]
+            startDate = timeRef_deploy - timedelta(days=15)
+            endDate = timeRef_deploy + timedelta(days=15)
+            plot_pre = False
+            plot_post = False
+            preText = False
+            dataDict_pre = {}
+            dataDict_post = {}
+      
+            baseDS_pre = paramData.sel(time=slice(startDate, timeRef_deploy))
+            if baseDS_pre.time.size !=0:  
+                maskStart_pre = baseDS_pre.time[0].values - np.timedelta64(5,'m')
+                maskEnd_pre = baseDS_pre.time[-1].values + np.timedelta64(5,'m')
+                mask_pre = (profileList['start'] > maskStart_pre) & (profileList['end'] <= maskEnd_pre)
+                profiles_pre = profileList.loc[mask_pre]
+                if len(profiles_pre) > 0:
+                    for index,profile in profiles_pre.iterrows():
+                        dataSlice = baseDS_pre.sel(time=slice(profile[profileStart], profile[profileEnd]))
+                        dataDict_pre[profile['peak']] = {}
+                        dataDict_pre[profile['peak']]['scatterX'] = dataSlice[Yparam].values
+                        dataDict_pre[profile['peak']]['scatterY'] = -dataSlice[pressParam].values
+                        dataDict_pre[profile['peak']]['scatterZ'] = dataSlice.time.values
+                    if dataDict_pre:
+                        scatterX_pre = np.concatenate( [ subDict['scatterX'] for subDict in dataDict_pre.values() ] )
+                        scatterY_pre = np.concatenate( [ subDict['scatterY'] for subDict in dataDict_pre.values() ] )
+                        scatterZ_pre = np.concatenate( [ subDict['scatterZ'] for subDict in dataDict_pre.values() ] )
+                        plot_pre = True
+            
+            baseDS_post = paramData.sel(time=slice(timeRef_deploy,endDate))
+            if baseDS_post.time.size !=0:
+                maskStart_post = baseDS_post.time[0].values - np.timedelta64(5,'m')
+                maskEnd_post = baseDS_post.time[-1].values + np.timedelta64(5,'m')
+                mask_post = (profileList['start'] > maskStart_post) & (profileList['end'] <= maskEnd_post)
+                profiles_post = profileList.loc[mask_post]
+                if len(profiles_post) > 0:
+                    for index,profile in profiles_post.iterrows():
+                        dataSlice = baseDS_post.sel(time=slice(profile[profileStart], profile[profileEnd]))
+                        dataDict_post[profile['peak']] = {}
+                        dataDict_post[profile['peak']]['scatterX'] = dataSlice[Yparam].values
+                        dataDict_post[profile['peak']]['scatterY'] = -dataSlice[pressParam].values
+                        dataDict_post[profile['peak']]['scatterZ'] = dataSlice.time.values
+                    if dataDict_post:
+                        scatterX_post = np.concatenate( [ subDict['scatterX'] for subDict in dataDict_post.values() ] )
+                        scatterY_post = np.concatenate( [ subDict['scatterY'] for subDict in dataDict_post.values() ] )
+                        scatterZ_post = np.concatenate( [ subDict['scatterZ'] for subDict in dataDict_post.values() ] )
+                        plot_post = True
+            
+            ### Plot all profiles on one plot
+            fig, ax = setPlot()
+            if plot_pre:
+                plt.scatter(scatterX_pre,scatterY_pre, s=1, c=scatterZ_pre,cmap='Greens')
+                timeString = np.datetime_as_string(scatterZ_pre[0],unit='D') + ' - ' + np.datetime_as_string(scatterZ_pre[-1],unit='D')
+                timeString = timeString.replace('T',' ') 
+                plt.text(.01, .99, timeString, size=4, color='#12541f', ha='left', va='top', transform=ax.transAxes)
+                preText = True
+            if plot_post:
+                plt.scatter(scatterX_post,scatterY_post, s=1, c=scatterZ_post,cmap="Blues")
+                timeString = np.datetime_as_string(scatterZ_post[0],unit='D') + ' - ' + np.datetime_as_string(scatterZ_post[-1],unit='D')
+                timeString = timeString.replace('T',' ') 
+                if preText:
+                    plt.text(.01, .90, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
+                else:
+                    plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
+            if not plot_pre and not plot_post:
+                    plt.annotate('No Data Available', xy=(0.3, 0.5), xycoords='axes fraction')
+            
+            fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
+            fig.savefig(fileName + '_full.png', dpi=300)
+            ax.set_xlim(profile_paramMin, profile_paramMax)
+            fig.savefig(fileName + '_standard.png', dpi=300)
+            ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
+            fig.savefig(fileName + '_local.png', dpi=300)
+            
+            profileIterator += 1
+            iterList_pre = []
+            iterList_post = []
+            if dataDict_pre:
+                iterList_pre = sorted(set([k.week for k in dataDict_pre.keys()]))
+            if dataDict_post:
+                iterList_post = sorted(set([k.week for k in dataDict_post.keys()]))
+            iterList = iterList_pre + iterList_post
+            preText = False
+                
+            for spanIter in iterList:
+                fig, ax = setPlot()
+                if plot_pre:
+                    scatterX_pre = np.concatenate( [ dataDict_pre[i]['scatterX'] for i in dataDict_pre.keys() if (i.week == spanIter) ] )
+                    scatterY_pre = np.concatenate( [ dataDict_pre[i]['scatterY'] for i in dataDict_pre.keys() if (i.week == spanIter) ] )
+                    scatterZ_pre = np.concatenate( [ dataDict_pre[i]['scatterZ'] for i in dataDict_pre.keys() if (i.week == spanIter) ] )
+                    if len(scatterX_pre) > 0:
+                        plt.scatter(scatterX_pre,scatterY_pre, s=1, c=scatterZ_pre,cmap='Greens')
+                        timeString = np.datetime_as_string(scatterZ_pre[0],unit='D')
+                        plt.text(.01, .99, timeString, size=4, color='#12541f', ha='left', va='top', transform=ax.transAxes)
+                        preText = True
+                if plot_post:
+                    scatterX_post = np.concatenate( [ dataDict_post[i]['scatterX'] for i in dataDict_post.keys() if (i.week == spanIter) ] )
+                    scatterY_post = np.concatenate( [ dataDict_post[i]['scatterY'] for i in dataDict_post.keys() if (i.week == spanIter) ] )
+                    scatterZ_post = np.concatenate( [ dataDict_post[i]['scatterZ'] for i in dataDict_post.keys() if (i.week == spanIter) ] )
+                    if len(scatterX_post) > 0:
+                        plt.scatter(scatterX_post,scatterY_post, s=1, c=scatterZ_post,cmap='Blues')
+                        timeString = np.datetime_as_string(scatterZ_post[0],unit='D')
+                        if preText:
+                            plt.text(.01, .90, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
+                        else:
+                            plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
+
+                fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
+                fig.savefig(fileName + '_full.png', dpi=300)
+                ax.set_xlim(profile_paramMin, profile_paramMax)
+                fig.savefig(fileName + '_standard.png', dpi=300)
+                ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
+                fig.savefig(fileName + '_local.png', dpi=300)
+                profileIterator += 1        
+                
+            
+        else:
+            endDate = timeRef
+            startDate = timeRef - timedelta(days=int(span))
+            plot_all = False
+    
+            baseDS = paramData.sel(time=slice(startDate, endDate))
+            if baseDS.time.size !=0:
+                maskStart = baseDS.time[0].values - np.timedelta64(5,'m')
+                maskEnd = baseDS.time[-1].values + np.timedelta64(5,'m')
+                mask = (profileList['start'] > maskStart) & (profileList['end'] <= maskEnd)
+                profiles = profileList.loc[mask]
+                dataDict = {}
+                if len(profiles) > 0:
+                    for index,profile in profiles.iterrows():
+                        dataSlice = baseDS.sel(time=slice(profile[profileStart], profile[profileEnd]))
+                        dataDict[profile['peak']] = {}
+                        dataDict[profile['peak']]['scatterX'] = dataSlice[Yparam].values
+                        dataDict[profile['peak']]['scatterY'] = -dataSlice[pressParam].values
+                        dataDict[profile['peak']]['scatterZ'] = dataSlice.time.values
+                    if dataDict:
+                        scatterX = np.concatenate( [ subDict['scatterX'] for subDict in dataDict.values() ] )
+                        scatterY = np.concatenate( [ subDict['scatterY'] for subDict in dataDict.values() ] )
+                        scatterZ = np.concatenate( [ subDict['scatterZ'] for subDict in dataDict.values() ] )
+                        plot_all = True
+        
+                ### Plot all profiles on one plot
+                fig, ax = setPlot()
+                if plot_all:
+                    if len(profiles) == 1:
+                        plt.plot(scatterX,scatterY,'.',color='#1f78b4',markersize=1)
+                    else:
+                        plt.scatter(scatterX,scatterY, s=1, c=scatterZ,cmap='Blues')
+                    if 'day' in spanString:
+                        timeString = np.datetime_as_string(scatterZ[0],unit='m') + ' - ' + np.datetime_as_string(scatterZ[-1],unit='m')
+                    else:
+                        timeString = np.datetime_as_string(scatterZ[0],unit='D') + ' - ' + np.datetime_as_string(scatterZ[-1],unit='D')
+                    timeString = timeString.replace('T',' ')    
+                    plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
+                else:
+                    plt.annotate('No Data Available', xy=(0.3, 0.5), xycoords='axes fraction')
+                    
+                
+                fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
+                fig.savefig(fileName + '_full.png', dpi=300)
+                ax.set_xlim(profile_paramMin, profile_paramMax)
+                fig.savefig(fileName + '_standard.png', dpi=300)
+                ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
+                fig.savefig(fileName + '_local.png', dpi=300)
+
+                if dataDict:
+                    if 'day' in spanString:
+                        profileIterator += 1
+                        for key in dataDict.keys():
+                            fig, ax = setPlot()
+                            plt.plot(dataDict[key]['scatterX'],dataDict[key]['scatterY'],'.',color='#1f78b4',markersize=1)
+                            timeString = key.strftime("%Y-%m-%d %H:%M")
+                            plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
+                            fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
+                            fig.savefig(fileName + '_full.png', dpi=300)
+                            ax.set_xlim(profile_paramMin, profile_paramMax)
+                            fig.savefig(fileName + '_standard.png', dpi=300)
+                            ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
+                            fig.savefig(fileName + '_local.png', dpi=300)
+                            profileIterator += 1
+                    elif 'week' in spanString:
+                        profileIterator += 1 
+                        iterList = sorted(set([k.day for k in dataDict.keys()]))
+                        for spanIter in iterList:
+                            fig, ax = setPlot()
+                            scatterX_sub = np.concatenate( [ dataDict[i]['scatterX'] for i in dataDict.keys() if (i.day == spanIter) ] )
+                            scatterY_sub = np.concatenate( [ dataDict[i]['scatterY'] for i in dataDict.keys() if (i.day == spanIter) ] )
+                            scatterZ_sub = np.concatenate( [ dataDict[i]['scatterZ'] for i in dataDict.keys() if (i.day == spanIter) ] )
+                            plt.scatter(scatterX_sub,scatterY_sub, s=1, c=scatterZ_sub,cmap='Blues')
+                            timeString = np.datetime_as_string(scatterZ_sub[0],unit='D')
+                            plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
+                            fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
+                            fig.savefig(fileName + '_full.png', dpi=300)
+                            ax.set_xlim(profile_paramMin, profile_paramMax)
+                            fig.savefig(fileName + '_standard.png', dpi=300)
+                            ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
+                            fig.savefig(fileName + '_local.png', dpi=300)
+                            profileIterator += 1
+                    elif 'month' in spanString:
+                        profileIterator += 1
+                        iterList = sorted(set([k.week for k in dataDict.keys()]))
+                        for spanIter in iterList:
+                            fig, ax = setPlot()
+                            scatterX_sub = np.concatenate( [ dataDict[i]['scatterX'] for i in dataDict.keys() if (i.week == spanIter) ] )
+                            scatterY_sub = np.concatenate( [ dataDict[i]['scatterY'] for i in dataDict.keys() if (i.week == spanIter) ] )
+                            scatterZ_sub = np.concatenate( [ dataDict[i]['scatterZ'] for i in dataDict.keys() if (i.week == spanIter) ] )
+                            if len(scatterZ_sub) > 0:
+                                plt.scatter(scatterX_sub,scatterY_sub, s=1, c=scatterZ_sub,cmap='Blues')
+                                timeString = np.datetime_as_string(scatterZ_sub[0],unit='D') + ' - ' + np.datetime_as_string(scatterZ_sub[-1],unit='D')
+                                timeString = timeString.replace('T',' ') 
+                                plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
+                                fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
+                                fig.savefig(fileName + '_full.png', dpi=300)
+                                ax.set_xlim(profile_paramMin, profile_paramMax)
+                                fig.savefig(fileName + '_standard.png', dpi=300)
+                                ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
+                                fig.savefig(fileName + '_local.png', dpi=300)
+                                profileIterator += 1
+                    elif 'year' in spanString:
+                        profileIterator += 1
+                        iterList = sorted(set([k.month for k in dataDict.keys()]))
+                        for spanIter in iterList:
+                            fig, ax = setPlot()
+                            scatterX_sub = np.concatenate( [ dataDict[i]['scatterX'] for i in dataDict.keys() if (i.month == spanIter) ] )
+                            scatterY_sub = np.concatenate( [ dataDict[i]['scatterY'] for i in dataDict.keys() if (i.month == spanIter) ] )
+                            scatterZ_sub = np.concatenate( [ dataDict[i]['scatterZ'] for i in dataDict.keys() if (i.month == spanIter) ] )
+                            plt.scatter(scatterX_sub,scatterY_sub, s=1, c=scatterZ_sub,cmap='Blues')
+                            timeString = np.datetime_as_string(scatterZ_sub[0],unit='D') + ' - ' + np.datetime_as_string(scatterZ_sub[-1],unit='D')
+                            timeString = timeString.replace('T',' ') 
+                            plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
+                            fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
+                            fig.savefig(fileName + '_full.png', dpi=300)
+                            ax.set_xlim(profile_paramMin, profile_paramMax)
+                            fig.savefig(fileName + '_standard.png', dpi=300)
+                            ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
+                            fig.savefig(fileName + '_local.png', dpi=300)
+                            profileIterator += 1
+            else:            
+                fig,ax = setPlot()
+                plt.annotate(
+                    'No Data Available', xy=(0.3, 0.5), xycoords='axes fraction'
+                )
+                fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
+                fig.savefig(fileName + '_full.png', dpi=300)
+                fig.savefig(fileName + '_standard.png', dpi=300)
+                fig.savefig(fileName + '_local.png', dpi=300)
+        
+    return
+
+
+
+
+
 def plotScatter(
     Yparam,
     paramData,

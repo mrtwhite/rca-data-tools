@@ -275,6 +275,26 @@ def run_dashboard_creation(
                         site,
                     )
                     plotList.append(plots)
+                    plots = dashboard.plotProfilesScatter(
+                        Yparam,
+                        pressParam,
+                        paramData,
+                        plotTitle,
+                        timeRef,
+                        profile_paramMin,
+                        profile_paramMax,
+                        profile_paramMin_local,
+                        profile_paramMax_local,
+                        colorMap,
+                        imageName_base,
+                        overlayData_clim,
+                        overlayData_near,
+                        span,
+                        spanString,
+                        profileList,
+                        statusDict,
+                        site,
+                    )
                     depths = sites_dict[site]['depths'].strip('"').split(',')
                     if 'Single' not in depths:
                         for profileDepth in depths:
