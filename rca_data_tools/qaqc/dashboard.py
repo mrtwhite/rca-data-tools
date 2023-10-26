@@ -831,7 +831,7 @@ def plotProfilesScatter(
     descentSamples = ['pco2_seawater','ph_seawater']
     
     # Drop nans
-    paramData = paramData.where(paramData[Yparam].notnull(),drop=True)
+    paramData = paramData.where(paramData[Yparam].notnull().compute(),drop=True)
     
     # yLabel
     yLabel = 'pressure, m'
