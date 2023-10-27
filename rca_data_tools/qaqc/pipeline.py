@@ -237,11 +237,11 @@ def main():
     from loguru import logger
 
     args = parse_args()
+    now = datetime.datetime.utcnow()
     if args.all is True:
         # Creates pipeline objects for all the sites
         # if run is specified, will actually run the pipeline
         # in prefect cloud.
-        now = datetime.datetime.utcnow()
         for key in sites_dict.keys():
             logger.info(f"creating pipeline instance for site: {key}")
             pipeline = QAQCPipeline(
@@ -263,7 +263,7 @@ def main():
         # This may be useful for testing
         pipeline = QAQCPipeline(
             site=args.site,
-            time=args.time,
+            time=now.strftime("%Y-%m-%d"),
             span=args.span,
             threshold=args.threshold,
             cloud_run=args.cloud,
