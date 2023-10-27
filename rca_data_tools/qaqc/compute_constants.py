@@ -13,5 +13,6 @@ COMPUTE_EXCEPTIONS = {
         '365': '8vcpu_48gb',
         '30': '8vcpu_48gb',
         '7': '8vcup_48gb',
+        '1': '8vcpu_48gb',
     },
 }
