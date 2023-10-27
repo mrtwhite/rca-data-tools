@@ -215,7 +215,7 @@ def parse_args():
     arg_parser.add_argument('--cloud', action="store_true")
     arg_parser.add_argument('--s3-sync', action="store_true")
     arg_parser.add_argument('--site', type=str, default=None)
-    arg_parser.add_argument('--time', type=str, default='2020-06-30')
+    arg_parser.add_argument('--time', type=str, default=None)
     arg_parser.add_argument(
         '--s3-bucket',
         type=str,
@@ -228,7 +228,7 @@ def parse_args():
         default='7',
         help=f"Choices {str(list(span_dict.keys()))}",
     )
-    arg_parser.add_argument('--threshold', type=int, default=1000000)
+    arg_parser.add_argument('--threshold', type=int, default=5000000)
 
     return arg_parser.parse_args()
 
