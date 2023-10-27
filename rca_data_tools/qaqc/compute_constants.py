@@ -9,4 +9,9 @@ COMPUTE_EXCEPTIONS = {
     'RS03AXPS-SF03A-3D-SPKIRA301':{
         '365': '8vcpu_48gb'
     },
+    'RS01SBPS-SF01A-3D-SPKIRA101':{
+        '365': '8vcpu_48gb',
+        '30': '8vcpu_48gb',
+        '7': '8vcup_48gb',
+    },
 }
