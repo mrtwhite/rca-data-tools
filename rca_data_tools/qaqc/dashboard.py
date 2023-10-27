@@ -801,7 +801,7 @@ def plotProfilesGrid(
 
 
 def plotProfilesScatter(
-    Yparam,
+    Xparam,
     pressParam,
     paramData,
     plotTitle,
@@ -831,12 +831,12 @@ def plotProfilesScatter(
     descentSamples = ['pco2_seawater','ph_seawater']
     
     # Drop nans
-    paramData = paramData.where(paramData[Yparam].notnull().compute(),drop=True)
+    paramData = paramData.where(paramData[Xparam].notnull().compute(),drop=True)
     
     # yLabel
     yLabel = 'pressure, m'
     
-    if Yparam in descentSamples:
+    if Xparam in descentSamples:
         profileStart = 'peak'
         profileEnd = 'end'
     else:
@@ -871,6 +871,9 @@ def plotProfilesScatter(
         plt.ylabel(yLabel, fontsize=4)
         ax.tick_params(direction='out', length=2, width=0.5, labelsize=4)
         ax.ticklabel_format(useOffset=False)
+        yMin = -200
+        yMax = 0
+        ax.set_ylim(yMin, yMax)
         
         ax.grid(False)
         return (fig, ax)
@@ -913,7 +916,7 @@ def plotProfilesScatter(
                     for index,profile in profiles_pre.iterrows():
                         dataSlice = baseDS_pre.sel(time=slice(profile[profileStart], profile[profileEnd]))
                         dataDict_pre[profile['peak']] = {}
-                        dataDict_pre[profile['peak']]['scatterX'] = dataSlice[Yparam].values
+                        dataDict_pre[profile['peak']]['scatterX'] = dataSlice[Xparam].values
                         dataDict_pre[profile['peak']]['scatterY'] = -dataSlice[pressParam].values
                         dataDict_pre[profile['peak']]['scatterZ'] = dataSlice.time.values
                     if dataDict_pre:
@@ -932,7 +935,7 @@ def plotProfilesScatter(
                     for index,profile in profiles_post.iterrows():
                         dataSlice = baseDS_post.sel(time=slice(profile[profileStart], profile[profileEnd]))
                         dataDict_post[profile['peak']] = {}
-                        dataDict_post[profile['peak']]['scatterX'] = dataSlice[Yparam].values
+                        dataDict_post[profile['peak']]['scatterX'] = dataSlice[Xparam].values
                         dataDict_post[profile['peak']]['scatterY'] = -dataSlice[pressParam].values
                         dataDict_post[profile['peak']]['scatterZ'] = dataSlice.time.values
                     if dataDict_post:
@@ -1025,7 +1028,7 @@ def plotProfilesScatter(
                     for index,profile in profiles.iterrows():
                         dataSlice = baseDS.sel(time=slice(profile[profileStart], profile[profileEnd]))
                         dataDict[profile['peak']] = {}
-                        dataDict[profile['peak']]['scatterX'] = dataSlice[Yparam].values
+                        dataDict[profile['peak']]['scatterX'] = dataSlice[Xparam].values
                         dataDict[profile['peak']]['scatterY'] = -dataSlice[pressParam].values
                         dataDict[profile['peak']]['scatterZ'] = dataSlice.time.values
                     if dataDict:
@@ -1061,7 +1064,7 @@ def plotProfilesScatter(
                 if dataDict:
                     if 'day' in spanString:
                         profileIterator += 1
-                        for key in dataDict.keys():
+                        for key in sorted(dataDict.keys()):
                             fig, ax = setPlot()
                             plt.plot(dataDict[key]['scatterX'],dataDict[key]['scatterY'],'.',color='#1f78b4',markersize=1)
                             timeString = key.strftime("%Y-%m-%d %H:%M")
@@ -1075,12 +1078,13 @@ def plotProfilesScatter(
                             profileIterator += 1
                     elif 'week' in spanString:
                         profileIterator += 1 
-                        iterList = sorted(set([k.day for k in dataDict.keys()]))
-                        for spanIter in iterList:
+                        iterList = [[k.year,k.month,k.day] for k in dataDict.keys()]
+                        iterList_sorted = sorted({tuple(i) for i in iterList}, key=lambda element: (element[0], element[1], element[2]))
+                        for spanIter in iterList_sorted:
                             fig, ax = setPlot()
-                            scatterX_sub = np.concatenate( [ dataDict[i]['scatterX'] for i in dataDict.keys() if (i.day == spanIter) ] )
-                            scatterY_sub = np.concatenate( [ dataDict[i]['scatterY'] for i in dataDict.keys() if (i.day == spanIter) ] )
-                            scatterZ_sub = np.concatenate( [ dataDict[i]['scatterZ'] for i in dataDict.keys() if (i.day == spanIter) ] )
+                            scatterX_sub = np.concatenate( [ dataDict[i]['scatterX'] for i in dataDict.keys() if ( (i.day == spanIter[2]) and (i.year == spanIter[0]) and (i.month == spanIter[1]) ) ] )
+                            scatterY_sub = np.concatenate( [ dataDict[i]['scatterY'] for i in dataDict.keys() if ( (i.day == spanIter[2]) and (i.year == spanIter[0]) and (i.month == spanIter[1]) ) ] )
+                            scatterZ_sub = np.concatenate( [ dataDict[i]['scatterZ'] for i in dataDict.keys() if ( (i.day == spanIter[2]) and (i.year == spanIter[0]) and (i.month == spanIter[1]) ) ] )
                             plt.scatter(scatterX_sub,scatterY_sub, s=1, c=scatterZ_sub,cmap='Blues')
                             timeString = np.datetime_as_string(scatterZ_sub[0],unit='D')
                             plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
@@ -1093,12 +1097,13 @@ def plotProfilesScatter(
                             profileIterator += 1
                     elif 'month' in spanString:
                         profileIterator += 1
-                        iterList = sorted(set([k.week for k in dataDict.keys()]))
-                        for spanIter in iterList:
+                        iterList = [[k.year,k.week] for k in dataDict.keys()]
+                        iterList_sorted = sorted({tuple(i) for i in iterList}, key=lambda element: (element[0], element[1]))
+                        for spanIter in iterList_sorted:
                             fig, ax = setPlot()
-                            scatterX_sub = np.concatenate( [ dataDict[i]['scatterX'] for i in dataDict.keys() if (i.week == spanIter) ] )
-                            scatterY_sub = np.concatenate( [ dataDict[i]['scatterY'] for i in dataDict.keys() if (i.week == spanIter) ] )
-                            scatterZ_sub = np.concatenate( [ dataDict[i]['scatterZ'] for i in dataDict.keys() if (i.week == spanIter) ] )
+                            scatterX_sub = np.concatenate( [ dataDict[i]['scatterX'] for i in dataDict.keys() if ( (i.week == spanIter[1]) and (i.year == spanIter[0]) ) ] )
+                            scatterY_sub = np.concatenate( [ dataDict[i]['scatterY'] for i in dataDict.keys() if ( (i.week == spanIter[1]) and (i.year == spanIter[0]) ) ] )
+                            scatterZ_sub = np.concatenate( [ dataDict[i]['scatterZ'] for i in dataDict.keys() if ( (i.week == spanIter[1]) and (i.year == spanIter[0]) ) ] )
                             if len(scatterZ_sub) > 0:
                                 plt.scatter(scatterX_sub,scatterY_sub, s=1, c=scatterZ_sub,cmap='Blues')
                                 timeString = np.datetime_as_string(scatterZ_sub[0],unit='D') + ' - ' + np.datetime_as_string(scatterZ_sub[-1],unit='D')
@@ -1113,23 +1118,25 @@ def plotProfilesScatter(
                                 profileIterator += 1
                     elif 'year' in spanString:
                         profileIterator += 1
-                        iterList = sorted(set([k.month for k in dataDict.keys()]))
-                        for spanIter in iterList:
+                        iterList = [[k.year,k.month] for k in dataDict.keys()]
+                        iterList_sorted = sorted({tuple(i) for i in iterList}, key=lambda element: (element[0], element[1]))
+                        for spanIter in iterList_sorted:
                             fig, ax = setPlot()
-                            scatterX_sub = np.concatenate( [ dataDict[i]['scatterX'] for i in dataDict.keys() if (i.month == spanIter) ] )
-                            scatterY_sub = np.concatenate( [ dataDict[i]['scatterY'] for i in dataDict.keys() if (i.month == spanIter) ] )
-                            scatterZ_sub = np.concatenate( [ dataDict[i]['scatterZ'] for i in dataDict.keys() if (i.month == spanIter) ] )
-                            plt.scatter(scatterX_sub,scatterY_sub, s=1, c=scatterZ_sub,cmap='Blues')
-                            timeString = np.datetime_as_string(scatterZ_sub[0],unit='D') + ' - ' + np.datetime_as_string(scatterZ_sub[-1],unit='D')
-                            timeString = timeString.replace('T',' ') 
-                            plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
-                            fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
-                            fig.savefig(fileName + '_full.png', dpi=300)
-                            ax.set_xlim(profile_paramMin, profile_paramMax)
-                            fig.savefig(fileName + '_standard.png', dpi=300)
-                            ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
-                            fig.savefig(fileName + '_local.png', dpi=300)
-                            profileIterator += 1
+                            scatterX_sub = np.concatenate( [ dataDict[i]['scatterX'] for i in dataDict.keys() if ( (i.month == spanIter[1]) and (i.year == spanIter[0]) ) ] )
+                            scatterY_sub = np.concatenate( [ dataDict[i]['scatterY'] for i in dataDict.keys() if ( (i.month == spanIter[1]) and (i.year == spanIter[0]) ) ] )
+                            scatterZ_sub = np.concatenate( [ dataDict[i]['scatterZ'] for i in dataDict.keys() if ( (i.month == spanIter[1]) and (i.year == spanIter[0]) ) ] )
+                            if len(scatterZ_sub) > 0:
+                                plt.scatter(scatterX_sub,scatterY_sub, s=1, c=scatterZ_sub,cmap='Blues')
+                                timeString = np.datetime_as_string(scatterZ_sub[0],unit='D') + ' - ' + np.datetime_as_string(scatterZ_sub[-1],unit='D')
+                                timeString = timeString.replace('T',' ') 
+                                plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
+                                fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
+                                fig.savefig(fileName + '_full.png', dpi=300)
+                                ax.set_xlim(profile_paramMin, profile_paramMax)
+                                fig.savefig(fileName + '_standard.png', dpi=300)
+                                ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
+                                fig.savefig(fileName + '_local.png', dpi=300)
+                                profileIterator += 1
             else:            
                 fig,ax = setPlot()
                 plt.annotate(
