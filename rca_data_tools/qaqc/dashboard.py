@@ -1085,16 +1085,17 @@ def plotProfilesScatter(
                             scatterX_sub = np.concatenate( [ dataDict[i]['scatterX'] for i in dataDict.keys() if ( (i.day == spanIter[2]) and (i.year == spanIter[0]) and (i.month == spanIter[1]) ) ] )
                             scatterY_sub = np.concatenate( [ dataDict[i]['scatterY'] for i in dataDict.keys() if ( (i.day == spanIter[2]) and (i.year == spanIter[0]) and (i.month == spanIter[1]) ) ] )
                             scatterZ_sub = np.concatenate( [ dataDict[i]['scatterZ'] for i in dataDict.keys() if ( (i.day == spanIter[2]) and (i.year == spanIter[0]) and (i.month == spanIter[1]) ) ] )
-                            plt.scatter(scatterX_sub,scatterY_sub, s=1, c=scatterZ_sub,cmap='Blues')
-                            timeString = np.datetime_as_string(scatterZ_sub[0],unit='D')
-                            plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
-                            fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
-                            fig.savefig(fileName + '_full.png', dpi=300)
-                            ax.set_xlim(profile_paramMin, profile_paramMax)
-                            fig.savefig(fileName + '_standard.png', dpi=300)
-                            ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
-                            fig.savefig(fileName + '_local.png', dpi=300)
-                            profileIterator += 1
+                            if len(scatterZ_sub) > 0:
+                                plt.scatter(scatterX_sub,scatterY_sub, s=1, c=scatterZ_sub,cmap='Blues')
+                                timeString = np.datetime_as_string(scatterZ_sub[0],unit='D')
+                                plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
+                                fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
+                                fig.savefig(fileName + '_full.png', dpi=300)
+                                ax.set_xlim(profile_paramMin, profile_paramMax)
+                                fig.savefig(fileName + '_standard.png', dpi=300)
+                                ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
+                                fig.savefig(fileName + '_local.png', dpi=300)
+                                profileIterator += 1
                     elif 'month' in spanString:
                         profileIterator += 1
                         iterList = [[k.year,k.week] for k in dataDict.keys()]
