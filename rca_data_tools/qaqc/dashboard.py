@@ -36,7 +36,6 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import cmocean # noqa
 from scipy.interpolate import griddata
 
-
 INPUT_BUCKET = "ooi-data-prod/"
 
 
@@ -139,11 +138,9 @@ def gridProfiles(ds,pressureName,variableName,profileIndices):
         for index, row in profileIndices.iterrows():
             startTime = row[start]
             endTime = row[end]
-            #gridX[index] = row['peak'].timestamp()
             ds_sub = ds.sel(time=slice(startTime,endTime))
             if len(ds_sub['time']) > 0: 
                 gridX[index] = row['peak'].timestamp()
-                #gridX[index] = row['peak'].timestamp()
                 if invert:
                     variable = np.flip(ds_sub[variableName].values)
                     pressure = np.flip(ds_sub[pressureName].values)
@@ -153,15 +150,18 @@ def gridProfiles(ds,pressureName,variableName,profileIndices):
                 try:
                     profile = np.interp(gridY,pressure,variable)
                     gridZ[:,index] = profile
+                    minPress = min(pressure)
+                    maxPress = max(pressure)
+                    if minPress > 5:
+                        pressMaskMin = np.where(gridY < minPress)
+                        gridZ[pressMaskMin,index] = np.nan
+                    if maxPress < 185:
+                        pressMaskMax = np.where(gridY > maxPress)
+                        gridZ[pressMaskMax,index] = np.nan 
                 except:
                     gridZ[:,index] = np.nan
-                    #print('setting gridZ to nan because interp failed...')
-                ### TODO: fill grid with nans outside of pressure values in variable
             else:
                 gridZ[:,index] = np.nan
-                #print('setting gridZ to nan because timeslice was empty')
-    #print(gridZ)
-    #print(gridX)
     return(gridX,gridY,gridZ)
 
     
@@ -380,7 +380,7 @@ def plotProfilesGrid(
 
     # Initiate fileName list
     fileNameList = []
-
+   
     # Plot Overlays
     overlays = ['clim', 'near', 'time', 'none']
 
@@ -451,7 +451,7 @@ def plotProfilesGrid(
         ax.grid(False)
         ax.invert_yaxis()
         plt.xlim(xMin, xMax)
-    
+        
         if 'contour' in plotType:
             if 'full' in params['range']:
                 graph = ax.contourf(Xx, Yy, Zz, 50, cmap=colorBar)
@@ -590,9 +590,8 @@ def plotProfilesGrid(
                 if int(span) > 45:
                     gapThreshold = 5
                 else:
-                    gapThreshold = 2
+                    gapThreshold = 1
                 nanMask = np.where(np.diff(xiDT) > timedelta(days=gapThreshold))
-                #zi[:,nanMask] = np.nan
                 zi[nanMask] = np.nan
 
         # plot filled contours

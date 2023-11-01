@@ -1,4 +1,4 @@
-﻿refDes,temperature,salinity,density,oxygen,nitrate,chlorophyll,par,pco2,ph,spectral_irradiance_412nm,spectral_irradiance_443nm,spectral_irradiance_490nm,spectral_irradiance_510nm,spectral_irradiance_555nm,spectral_irradiance_620nm,spectral_irradiance_683nm,velocity_east,velocity_north,velocity_up
+refDes,temperature,salinity,density,oxygen,nitrate,chlorophyll,par,pco2,ph,spectral_irradiance_412nm,spectral_irradiance_443nm,spectral_irradiance_490nm,spectral_irradiance_510nm,spectral_irradiance_555nm,spectral_irradiance_620nm,spectral_irradiance_683nm,velocity_east,velocity_north,velocity_up
 CE02SHBP-LJ01D-06-CTDBPN106,"{'local':[7,11]}","{'local':[31.5,34]}","{'local':[1024.5,1027.5]}","{'local':[0,300]}",,,,,,,,,,,,,,,
 CE04OSBP-LJ01C-06-CTDBPO108,"{'local':[4.4,6]}","{'local':[34.05,34.3]}","{'local':[1029,1030]}","{'local':[0,30]}",,,,,,,,,,,,,,,
 RS01SLBS-LJ01A-12-CTDPFB101,"{'local':[1.715,1.750]}","{'local':[34.63,34.66]}","{'local':[1041.19,1041.215]}","{'local':[75,85]}",,,,,,,,,,,,,,,
