@@ -35,6 +35,7 @@ from matplotlib.colors import ListedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import cmocean # noqa
 from scipy.interpolate import griddata
+from prefect import get_run_logger
 
 INPUT_BUCKET = "ooi-data-prod/"
 
@@ -110,6 +111,7 @@ def extractClim(timeRef, profileDepth, overlayData_clim):
 
 def gridProfiles(ds,pressureName,variableName,profileIndices):
 
+    logger = get_run_logger()
     mask = (profileIndices['start'] > ds.time[0].values) & (profileIndices['end'] <= ds.time[-1].values)
     profileIndices = profileIndices.loc[mask]
 
@@ -136,6 +138,7 @@ def gridProfiles(ds,pressureName,variableName,profileIndices):
         gridY = np.arange(0, 190, 0.5) ### grid points every 0.5 meters
         gridZ = np.zeros((len(gridY),len(gridX)))
         for index, row in profileIndices.iterrows():
+            logger.info(f"index: {index} row: {row}")
             startTime = row[start]
             endTime = row[end]
             ds_sub = ds.sel(time=slice(startTime,endTime))
@@ -150,14 +153,21 @@ def gridProfiles(ds,pressureName,variableName,profileIndices):
                 try:
                     profile = np.interp(gridY,pressure,variable)
                     gridZ[:,index] = profile
-                    minPress = min(pressure)
-                    maxPress = max(pressure)
+                    minPress = pressure.min()
+                    maxPress = pressure.max()
+                    logger.info("calculating min and max")
                     if minPress > 5:
                         pressMaskMin = np.where(gridY < minPress)
                         gridZ[pressMaskMin,index] = np.nan
+                        logger.info("removing vals below min")
+                        del pressMaskMin
+                        gc.collect()
                     if maxPress < 185:
                         pressMaskMax = np.where(gridY > maxPress)
                         gridZ[pressMaskMax,index] = np.nan 
+                        logger.info("removing vals above max")
+                        del pressMaskMax
+                        gc.collect()
                 except:
                     gridZ[:,index] = np.nan
             else:
