@@ -55,7 +55,6 @@ def read_logs() -> pd.DataFrame:
     wks = gc.open("HITL Data QA/QC Log")
     df_HITL = pd.DataFrame()
     for ws in wks.worksheets():
-        logger.info(f"loading {ws} into df")
         df = pd.DataFrame(ws.get_all_records())
         for col in df.columns:
             if 'Unnamed' in col:
