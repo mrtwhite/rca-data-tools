@@ -27,7 +27,7 @@ dependencies = [
     "netcdf4",
     "numba",
     "numpy",
-    "pandas<2",
+    "pandas<2", # TODO we should move to pandas > 2
     "pathlib",
     "prefect>2",
     "prefect-aws",

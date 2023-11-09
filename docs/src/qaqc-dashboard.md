@@ -4,7 +4,7 @@ The qaqc dashboard is a web application serving plots of the data to perform qua
 
 The application can be found at [qaqc.ooi-rca.net](https://qaqc.ooi-rca.net/).
 
-The QAQC dashboard is hosted on Amazon Web Services (AWS) in an S3 Bucket, which is then served via a Content Delivery Network (CDN). The plots found in the application is created by python scripts that have been made into data pipelines running on AWS via [Prefect 1.0](https://docs-v1.prefect.io/) data workflow and orchestration tools.
+The QAQC dashboard is hosted on Amazon Web Services (AWS) in an S3 Bucket, which is then served via a Content Delivery Network (CDN). The plots found in the application is created by python scripts that have been made into data pipelines running on AWS via Prefect 2.0 data workflow and orchestration tools.
 
 The code for the infrastructure, backend, and frontend are hosted in 3 separate repositories: `rca-data-tools`, `QAQC_dashboard`, and `cloud-infrastructure` (*private*) within the `OOI-CabledArray` organization.
 
