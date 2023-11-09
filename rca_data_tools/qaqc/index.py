@@ -34,7 +34,7 @@ def create_cloud_index(
     )
 
     plots_index = [
-        item for item in plotsmapper.keys() if item.endswith('.png')
+        item for item in plotsmapper.keys() if item.endswith('.png') #TODO add 'svg' to this 
     ]
     hitl_index = [item for item in hitlmapper.keys() if item.endswith('.csv')]
 

@@ -402,7 +402,7 @@ def organize_pngs(
 
     for i in PLOT_DIR.iterdir():
         if i.is_file():
-            if '.png' in str(i):
+            if '.png' in str(i): #TODO another place where we need to add '.svg'
                 fname = i.name
                 subsite = fname.split('-')[0]
 
@@ -421,7 +421,7 @@ def organize_pngs(
                         S3FS.rm(fs_path)
                     S3FS.put(str(destination.absolute()), fs_path)
             else:
-                print(f"{i} is not an image file ... skipping ...")
+                print(f"{i} is not an image file ... skipping ...") # TODO or svg?
         else:
             print(f"{i} is not a file ... skipping ...")
 

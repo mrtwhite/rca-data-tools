@@ -76,7 +76,7 @@ now = datetime.datetime.utcnow()
 
 @flow
 def qaqc_pipeline_flow(
-    site: str, #TODO determine compute resources based on site/stream
+    site: str,
     timeString: str=now.strftime('%Y-%m-%d'),
     span: str='1',
     threshold: int=1000000,
