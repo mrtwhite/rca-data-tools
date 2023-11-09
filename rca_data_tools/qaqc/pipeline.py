@@ -43,7 +43,6 @@ class QAQCPipeline:
         span='1',
         threshold=1_000_000,
         cloud_run=True,
-        prefect_project_name='rca-qaqc',
         s3_bucket=S3_BUCKET,
         s3_sync=True,
         s3fs_kwargs={},
@@ -53,7 +52,6 @@ class QAQCPipeline:
         self.span = span
         self.threshold = threshold
         self._cloud_run = cloud_run
-        self.prefect_project_name = prefect_project_name
         self.s3_bucket = s3_bucket
         self.s3_sync = s3_sync
         self.s3fs_kwargs = s3fs_kwargs
