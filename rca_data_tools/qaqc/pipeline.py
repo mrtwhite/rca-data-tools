@@ -201,13 +201,13 @@ class QAQCPipeline:
                     timeout=10 #TODO timeout might need to be increase if we have race condition errors
                 )
         else:
-            qaqc_pipeline_flow()
+            qaqc_pipeline_flow(**parameters)
 
 
 def parse_args():
     arg_parser = argparse.ArgumentParser(description='QAQC Pipeline Register')
 
-    arg_parser.add_argument('--register', action="store_true")
+    arg_parser.add_argument('--register', action="store_true") # TODO register should be deprecated
     arg_parser.add_argument('--all', action="store_true")
     arg_parser.add_argument('--run', action="store_true")
     arg_parser.add_argument('--cloud', action="store_true")

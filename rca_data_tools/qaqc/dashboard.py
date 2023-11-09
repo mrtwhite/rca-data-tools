@@ -109,7 +109,7 @@ def extractClim(timeRef, profileDepth, overlayData_clim):
 
 
 
-def gridProfiles(ds,pressureName,variableName,profileIndices):
+def gridProfiles(ds, pressureName, variableName, profileIndices):
 
     mask = (profileIndices['start'] > ds.time[0].values) & (profileIndices['end'] <= ds.time[-1].values)
     profileIndices = profileIndices.loc[mask]
