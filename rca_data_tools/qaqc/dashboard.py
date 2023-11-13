@@ -37,7 +37,7 @@ from scipy.interpolate import griddata
 from rca_data_tools.qaqc.utils import select_logger
 
 INPUT_BUCKET = "ooi-data-prod/"
-logger = select_logger()
+
 
 def pressureBracket(pressure, clim_dict):
     bracketList = []
@@ -224,7 +224,7 @@ def loadProfiles(refDes):
 
 
 
-def loadQARTOD(refDes, param, sensorType, logger=logger):
+def loadQARTOD(refDes, param, sensorType, logger=select_logger()):
 
     renameMap = {
                  'sea_water_temperature':'seawater_temperature',
@@ -367,7 +367,9 @@ def plotProfilesGrid(
     profileList,
     statusDict,
     site,
-    ):
+):
+    logger = select_logger()
+
     ### QC check for grid...this will be replaced with a new range for "gross range"
     if 'pco2' in Yparam:
         paramData = paramData.where((paramData[Yparam] < 2000).compute(), drop=True)
