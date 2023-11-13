@@ -23,8 +23,6 @@ import requests
 import s3fs
 import statistics as st
 import xarray as xr
-from loguru import logger
-
 
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -36,9 +34,10 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import cmocean # noqa
 from scipy.interpolate import griddata
 
+from rca_data_tools.qaqc.utils import select_logger
 
 INPUT_BUCKET = "ooi-data-prod/"
-
+logger = select_logger()
 
 def pressureBracket(pressure, clim_dict):
     bracketList = []
@@ -225,7 +224,7 @@ def loadProfiles(refDes):
 
 
 
-def loadQARTOD(refDes, param, sensorType, logger=None):
+def loadQARTOD(refDes, param, sensorType, logger=logger):
 
     renameMap = {
                  'sea_water_temperature':'seawater_temperature',
@@ -237,9 +236,6 @@ def loadQARTOD(refDes, param, sensorType, logger=None):
 
     if param in renameMap:
         param = renameMap[param]
-
-    if logger is None:
-        from loguru import logger
 
     (site, node, sensor1, sensor2) = refDes.split('-')
     sensor = sensor1 + '-' + sensor2
@@ -521,6 +517,7 @@ def plotProfilesGrid(
         xMax = endDate + timedelta(days=int(span) * 0.002)
 
     baseDS = paramData.sel(time=slice(startDate, endDate))
+    logger.info(f"baseDS - startDate: {startDate} endDate {endDate}") #TODO clean timestamp error handling
     ### drop nans from dataset
     baseDS = baseDS.where( ((baseDS[Yparam].notnull()) & (baseDS[pressParam].notnull())).compute(), drop=True)
     scatterX = baseDS.time.values
