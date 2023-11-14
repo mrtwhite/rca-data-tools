@@ -518,8 +518,8 @@ def plotProfilesGrid(
         xMin = startDate - timedelta(days=int(span) * 0.002)
         xMax = endDate + timedelta(days=int(span) * 0.002)
 
-    baseDS = paramData.sel(time=slice(startDate, endDate))
     logger.info(f"baseDS - startDate: {startDate} endDate {endDate}") #TODO clean timestamp error handling
+    baseDS = paramData.sel(time=slice(startDate, endDate))
     ### drop nans from dataset
     baseDS = baseDS.where( ((baseDS[Yparam].notnull()) & (baseDS[pressParam].notnull())).compute(), drop=True)
     scatterX = baseDS.time.values
