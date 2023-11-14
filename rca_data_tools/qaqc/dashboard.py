@@ -165,6 +165,7 @@ def gridProfiles(ds, pressureName, variableName, profileIndices):
 
     
 def loadDeploymentHistory(refDes):
+    logger = select_logger()
     deployHistory = {}
     (site, node, sensor1, sensor2) = refDes.split('-')
     dateColumns = ['startDateTime','stopDateTime']
