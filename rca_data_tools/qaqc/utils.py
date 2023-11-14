@@ -12,7 +12,7 @@ def select_logger():
 
 
 def coerce_qartod_executed_to_int(ds):
-    logger = select_logger
+    logger = select_logger()
 
     logger.info(f"ds size pre coercion: {ds.nbytes}")
     qartod_executed_vars = [var for var in ds.variables if 'qartod_executed' in var]
