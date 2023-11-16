@@ -205,9 +205,8 @@ class QAQCPipeline:
 
 
 def parse_args():
-    arg_parser = argparse.ArgumentParser(description='QAQC Pipeline Register')
+    arg_parser = argparse.ArgumentParser(description='QAQC Pipeline cli')
 
-    arg_parser.add_argument('--register', action="store_true") # TODO register should be deprecated
     arg_parser.add_argument('--all', action="store_true")
     arg_parser.add_argument('--run', action="store_true")
     arg_parser.add_argument('--cloud', action="store_true")
