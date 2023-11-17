@@ -22,7 +22,7 @@ def coerce_qartod_executed_to_int(ds):
         for i, test in enumerate(executed_tests):
             test_var_name = f"{var}_{test}"
             ds[test_var_name] = ds[var].str[i].astype(int)
-        
+
         ds = ds.drop(var)
     logger.info(f"ds size post coercion: {ds.nbytes}")
     return ds

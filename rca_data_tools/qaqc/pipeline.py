@@ -271,3 +271,6 @@ def main():
 
         if args.run is True:
             pipeline.run()
+
+if __name__ == '__main__':
+    main()
