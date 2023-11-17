@@ -7,7 +7,7 @@ workpool.)
 
 # TODO for now we want to save compute costs but this will
 # be uncommented in the future
-# COMPUTE_EXCEPTIONS = {
+COMPUTE_EXCEPTIONS = {}
 #     'RS03AXPS-SF03A-3D-SPKIRA301':{
 #         '365': '8vcpu_48gb'
 #     },
