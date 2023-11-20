@@ -109,7 +109,8 @@ def extractClim(timeRef, profileDepth, overlayData_clim):
 
 
 def gridProfiles(ds, pressureName, variableName, profileIndices):
-
+    logger = select_logger()
+    logger.info(f"creating grid profile for {variableName}")
     mask = (profileIndices['start'] > ds.time[0].values) & (profileIndices['end'] <= ds.time[-1].values)
     profileIndices = profileIndices.loc[mask]
 
@@ -136,6 +137,7 @@ def gridProfiles(ds, pressureName, variableName, profileIndices):
         gridY = np.arange(0, 190, 0.5) ### grid points every 0.5 meters
         gridZ = np.zeros((len(gridY),len(gridX)))
         for index, row in profileIndices.iterrows():
+
             startTime = row[start]
             endTime = row[end]
             #gridX[index] = row['peak'].timestamp()
@@ -161,6 +163,7 @@ def gridProfiles(ds, pressureName, variableName, profileIndices):
                 #print('setting gridZ to nan because timeslice was empty')
     #print(gridZ)
     #print(gridX)
+    logger.info(f"exiting grid profiles")
     return(gridX,gridY,gridZ)
 
     
@@ -406,6 +409,8 @@ def plotProfilesGrid(
 
     def plotter(Xx,Yy,Zz,plotType,colorBar,annotation,params):
 
+        logger.info("closing open figues...")
+        logger.info(f"plot-type: {plotType}")
         plt.close('all')
         plt.rcParams["font.family"] = "serif"
 
@@ -452,6 +457,7 @@ def plotProfilesGrid(
         plt.xlim(xMin, xMax)
     
         if 'contour' in plotType:
+            logger.info("contour in plotType...")
             if 'full' in params['range']:
                 graph = ax.contourf(Xx, Yy, Zz, 50, cmap=colorBar)
             else:
@@ -499,10 +505,10 @@ def plotProfilesGrid(
             cbar.formatter.set_useOffset(False)
             cbar.ax.set_ylabel(zLabel, fontsize=4)
             cbar.ax.tick_params(length=2, width=0.5, labelsize=4)
-        
+            logger.info("returning fig...")
         return fig
 
-    print('plotting grid for timeSpan: ', span)
+    logger.info('plotting grid for timeSpan: ', span)
 
     if 'deploy' in spanString:
         deployHistory = loadDeploymentHistory(site)
@@ -557,7 +563,7 @@ def plotProfilesGrid(
         else:
             xi_arr, yi_arr, zi = gridProfiles(baseDS,pressParam,Yparam,profileList)
             if xi_arr.shape[0] == 1:
-                print('error with gridding profiles...interpolating with old method...')
+                logger.info('error with gridding profiles...interpolating with old method...')
                 # x grid in seconds, with points every 1 hour (3600 seconds)
                 xi_arr = np.arange(xMinTimestamp, xMaxTimestamp, 3600)
                 # y grid in meters, with points every 1/2 meter
@@ -579,7 +585,7 @@ def plotProfilesGrid(
                         gapMask = (xi > scatterX_TS[gap]) & (xi < scatterX_TS[gap + 1])
                         zi[gapMask] = np.nan
             else:
-                print('success gridding profiles...')
+                logger.info('success gridding profiles...')
                 xi, yi = np.meshgrid(xi_arr, yi_arr)
                 ### filter out profile columns with no data where xi == 0
                 zeroMask = np.where(xi_arr == 0)
@@ -599,6 +605,7 @@ def plotProfilesGrid(
         if zi.shape[1] > 1:
           params = {'range':'full'}
           profilePlot = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
+          logger.info("created profilePlot object")
           if 'deploy' in spanString:
               plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
           fileName = fileName_base + '_' + spanString + '_' + 'none'
@@ -648,6 +655,7 @@ def plotProfilesGrid(
         for overlay in overlays:
             if 'clim' in overlay:
                 if overlayData_clim:
+                    logger.info("clim overlay...")
                     depthList = []
                     timeList = []
                     climList = []
@@ -705,6 +713,7 @@ def plotProfilesGrid(
                         ((dt64 - unix_epoch) / one_second) for dt64 in timeList
                     ]
                     # interpolate climatology data
+                    logger.info("interpolate climatology data")
                     clim_zi = griddata(
                         (climTime_TS, depthList),
                         climList,
@@ -730,6 +739,7 @@ def plotProfilesGrid(
 
                     climDiffMin = np.nanmin(climDiff)
                     climDiffMax = np.nanmax(climDiff)
+                    logger.info(f"climDiffMin: {climDiffMin} climDiffMax: {climDiffMax}")
                     if climDiffMax < 0:
                         climDiffMax = 0
                         colorMapStandard = balanceBlue
@@ -752,7 +762,9 @@ def plotProfilesGrid(
                         ###climParams['norm']['divnorm'] = divnorm
                         climParams['vmin'] = climDiffMin
                         climParams['vmax'] = climDiffMax
+                        logger.info("entering climPlot plotter")
                         climPlot = plotter(xiDT, yi, climDiff, 'clim', colorMapStandard, 'no', climParams)
+                        logger.info("climPlot succesful")
   
                     else:
                         # plot filled contours
@@ -761,7 +773,9 @@ def plotProfilesGrid(
                         climParams['norm'] = 'no'
                         climParams['vmin'] = climDiffMin
                         climParams['vmax'] = climDiffMax
+                        logger.info("entering climPlot plotter")
                         climPlot = plotter(xiDT, yi, climDiff, 'clim', colorMapStandard, 'no', climParams)
+                        logger.info("climPlot succesful")
        
                     if 'deploy' in spanString:
                         plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
@@ -771,7 +785,7 @@ def plotProfilesGrid(
                     fileNameList.append(fileName + '_local.png')
 
                 else:
-                    print('climatology is empty!')
+                    logger.info('climatology is empty!')
                     params = {'range':'full'}
                     profilePlot = plotter(0, 0, 0, 'empty', colorMap, 'No Climatology Data Available', params)
                     fileName = fileName_base + '_' + spanString + '_' + 'clim'
@@ -785,6 +799,7 @@ def plotProfilesGrid(
 
     else:
         params = {'range':'full'}
+        logger.info("saving files and created fileNameList...")
         profilePlot = plotter(0, 0, 0, 'empty', colorMap, 'No Data Available', params)
         fileName = fileName_base + '_' + spanString + '_' + 'clim'
         profilePlot.savefig(fileName + '_full.png', dpi=300)
@@ -820,7 +835,9 @@ def plotProfilesScatter(
     statusDict,
     site,
     ):
-  
+    
+    logger=select_logger()
+    logger.info("entering plotProfilesScatter")
     # Plot Overlays
     overlays = ['clim', 'flag', 'near', 'time', 'none']
 
@@ -831,8 +848,11 @@ def plotProfilesScatter(
     descentSamples = ['pco2_seawater','ph_seawater']
     
     # Drop nans
-    paramData = paramData.where(paramData[Xparam].notnull().compute(),drop=True)
-    
+    logger.info("dropping nans in paramData")
+    logger.info(paramData)
+    #paramData = paramData.where(paramData[Xparam].notnull().compute(),drop=True) #TODO mem bug?
+    logger.info("nans dropped!")
+
     # yLabel
     yLabel = 'pressure, m'
     
@@ -879,10 +899,10 @@ def plotProfilesScatter(
         return (fig, ax)
 
 
-    print('plotting profiles for timeSpan: ', span)
+    logger.info('plotting profiles for timeSpan: ', span)
     profileIterator = 0    
     if profileList.empty:
-        print('profileList empty...cannot create profile scatter plots')
+        logger.info('profileList empty...cannot create profile scatter plots')
         fig,ax = setPlot()
         plt.annotate(
             'No Profile Indices Available', xy=(0.3, 0.5), xycoords='axes fraction'
@@ -963,6 +983,7 @@ def plotProfilesScatter(
             if not plot_pre and not plot_post:
                     plt.annotate('No Data Available', xy=(0.3, 0.5), xycoords='axes fraction')
             
+            logger.info("saving scatter plots")
             fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
             fig.savefig(fileName + '_full.png', dpi=300)
             ax.set_xlim(profile_paramMin, profile_paramMax)
