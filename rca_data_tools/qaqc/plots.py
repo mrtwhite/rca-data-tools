@@ -392,7 +392,7 @@ def run_dashboard_creation(
     return plotList
 
 
-def organize_pngs(
+def organize_images(
     sync_to_s3=False, bucket_name='qaqc.ooica.net', fs_kwargs={}
 ):
 
@@ -402,7 +402,7 @@ def organize_pngs(
 
     for i in PLOT_DIR.iterdir():
         if i.is_file():
-            if '.png' in str(i): #TODO another place where we need to add '.svg'
+            if i.suffix == '.png' or i.suffix == '.svg':
                 fname = i.name
                 subsite = fname.split('-')[0]
 
@@ -421,7 +421,7 @@ def organize_pngs(
                         S3FS.rm(fs_path)
                     S3FS.put(str(destination.absolute()), fs_path)
             else:
-                print(f"{i} is not an image file ... skipping ...") # TODO or svg?
+                print(f"{i} is not a `png` or `svg` file ... skipping ...")
         else:
             print(f"{i} is not a file ... skipping ...")
 
@@ -489,8 +489,8 @@ def main():
             args.threshold,
             logger=logger,
         )
-        # Organize pngs into folders
-        organize_pngs()
+        # Organize pngs and svgs into folders
+        organize_images()
 
     end = datetime.utcnow()
     logger.info(

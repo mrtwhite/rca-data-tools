@@ -7,7 +7,7 @@ from prefect import get_run_logger
 
 from rca_data_tools.qaqc.plots import (
     instrument_dict,
-    organize_pngs,
+    organize_images,
     run_dashboard_creation,
     sites_dict,
 )
@@ -51,7 +51,7 @@ def dashboard_creation_task(
         
 
 @task
-def organize_pngs_task(
+def organize_images_task(
     plotList=[], fs_kwargs={}, sync_to_s3=False, s3_bucket=S3_BUCKET
 ):
     """
@@ -64,7 +64,7 @@ def organize_pngs_task(
     logger.info(f"fs_kwargs: {fs_kwargs}")
 
     if len(plotList) > 0:
-        organize_pngs(
+        organize_images(
             sync_to_s3=sync_to_s3, fs_kwargs=fs_kwargs, bucket_name=s3_bucket
         )
     else:
@@ -100,8 +100,8 @@ def qaqc_pipeline_flow(
         threshold=threshold,
     )
 
-    # Run organize pngs task
-    organize_pngs_task(
+    # Run organize images task
+    organize_images_task(
         plotList=plotList,
         sync_to_s3=sync_to_s3,
         fs_kwargs=fs_kwargs,
