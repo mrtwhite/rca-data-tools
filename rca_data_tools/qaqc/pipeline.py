@@ -26,7 +26,7 @@ from rca_data_tools.qaqc.compute_constants import COMPUTE_EXCEPTIONS
 from rca_data_tools.qaqc.flow import qaqc_pipeline_flow, S3_BUCKET
 
 HERE = Path(__file__).parent.absolute()
-
+now = datetime.datetime.utcnow()
 
 class QAQCPipeline:
     """
@@ -39,7 +39,7 @@ class QAQCPipeline:
     def __init__(
         self,
         site=None,
-        time='2020-06-30',
+        time=now.strftime("%Y-%m-%d"),
         span='1',
         threshold=1_000_000,
         cloud_run=True,
@@ -212,7 +212,7 @@ def parse_args():
     arg_parser.add_argument('--cloud', action="store_true")
     arg_parser.add_argument('--s3-sync', action="store_true")
     arg_parser.add_argument('--site', type=str, default=None)
-    arg_parser.add_argument('--time', type=str, default=None)
+    arg_parser.add_argument('--time', type=str, default=now.strftime("%Y-%m-%d"))
     arg_parser.add_argument(
         '--s3-bucket',
         type=str,
@@ -243,7 +243,7 @@ def main():
             logger.info(f"creating pipeline instance for site: {key}")
             pipeline = QAQCPipeline(
                 site=key,
-                time=now.strftime("%Y-%m-%d"),
+                time=args.time,
                 span=args.span,
                 threshold=args.threshold,
                 cloud_run=args.cloud,
@@ -260,7 +260,7 @@ def main():
         # This may be useful for testing
         pipeline = QAQCPipeline(
             site=args.site,
-            time=now.strftime("%Y-%m-%d"),
+            time=args.time,
             span=args.span,
             threshold=args.threshold,
             cloud_run=args.cloud,
