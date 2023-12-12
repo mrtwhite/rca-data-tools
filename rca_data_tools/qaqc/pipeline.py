@@ -3,7 +3,7 @@
 
 This module contains the qaqc_pipeline entry point: main() and the QAQCPipeline
 class. This class interfaces with the cli entry point to orchestrate a pipeline 
-with prefect 2 which uses the zarr files in the ooi-data-prod s3 bucket to generate 
+with prefect 2 which uses the zarr files in the ooi-data s3 bucket to generate 
 plots as pngs. These plots are viewable throug the frontend web app in QAQC_dashboard.
 
 Prefect 2 @flow and @task decorated functions are found in flow.py

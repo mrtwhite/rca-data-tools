@@ -36,7 +36,7 @@ from scipy.interpolate import griddata
 
 from rca_data_tools.qaqc.utils import select_logger
 
-INPUT_BUCKET = "ooi-data-prod/"
+INPUT_BUCKET = "ooi-data/"
 
 
 def pressureBracket(pressure, clim_dict):
