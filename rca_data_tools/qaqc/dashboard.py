@@ -193,7 +193,7 @@ def gridProfiles(ds,pressureName,variableName,profileIndices):
                     gridZ[:,index] = np.nan
             else:
                 gridZ[:,index] = np.nan
-    logger.info(f"exiting grid profiles")
+                
     return(gridX,gridY,gridZ)
 
     
