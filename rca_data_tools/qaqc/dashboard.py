@@ -73,19 +73,20 @@ def pressureBracket(pressure, clim_dict):
 
 def extractClimProfiles(climMonths, overlayData_clim):
     climatology = {}
-    for climMonth in climMonths:
-        depth = []
-        climMinus3std = []
-        climPlus3std = []
-        climData = []
-        for bracket in overlayData_clim[str(climMonth)].keys():
-            depth.append(st.mean(ast.literal_eval(bracket)))
-            clim0=ast.literal_eval(overlayData_clim[str(climMonth)][bracket])[0]
-            climMinus3std.append(clim0)
-            clim1=ast.literal_eval(overlayData_clim[str(climMonth)][bracket])[1]
-            climPlus3std.append(clim1)
-            climData.append(st.mean([clim0,clim1]))
-            climatology[str(climMonth)] = {'depth':depth,'climMinus3std':climMinus3std,'climPlus3std':climPlus3std,'climData':climData}
+    if overlayData_clim:
+        for climMonth in climMonths:
+            depth = []
+            climMinus3std = []
+            climPlus3std = []
+            climData = []
+            for bracket in overlayData_clim[str(climMonth)].keys():
+                depth.append(st.mean(ast.literal_eval(bracket)))
+                clim0=ast.literal_eval(overlayData_clim[str(climMonth)][bracket])[0]
+                climMinus3std.append(clim0)
+                clim1=ast.literal_eval(overlayData_clim[str(climMonth)][bracket])[1]
+                climPlus3std.append(clim1)
+                climData.append(st.mean([clim0,clim1]))
+                climatology[str(climMonth)] = {'depth':depth,'climMinus3std':climMinus3std,'climPlus3std':climPlus3std,'climData':climData}
 
     return climatology
 
