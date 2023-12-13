@@ -1163,16 +1163,17 @@ def plotProfilesScatter(
         elif 'clim' in overlay:
             climMonths = sorted(set(range(pd.to_datetime(timeSpan[0]).month,(pd.to_datetime(timeSpan[1]).month) + 1)))
             climatology = extractClimProfiles(climMonths, overlayData_clim)
-            xLimits = plt.gca().get_xlim()
-            for climMonth in climMonths:
-                climDepth = [-x for x in climatology[str(climMonth)]['depth']]
-                climLine = plt.plot(climatology[str(climMonth)]['climData'],climDepth,
-                    '-.',color='r',alpha=0.4,linewidth=0.25)
-            plt.xlim(xLimits[0], xLimits[1])
-            figureHandle.savefig(fileName + '.png', dpi=300)
-            for child in axHandle.get_children():
-                if isinstance(child, matplotlib.lines.Line2D):
-                    child.remove()
+            if climatology:
+                xLimits = plt.gca().get_xlim()
+                for climMonth in climMonths:
+                    climDepth = [-x for x in climatology[str(climMonth)]['depth']]
+                    climLine = plt.plot(climatology[str(climMonth)]['climData'],climDepth,
+                        '-.',color='r',alpha=0.4,linewidth=0.25)
+                plt.xlim(xLimits[0], xLimits[1])
+                figureHandle.savefig(fileName + '.png', dpi=300)
+                for child in axHandle.get_children():
+                    if isinstance(child, matplotlib.lines.Line2D):
+                        child.remove()
 
         elif 'flag' in overlay:
             qcDS = overlayData_flag.sel(time=slice(startDate, endDate))
