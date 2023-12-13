@@ -21,7 +21,7 @@ dependencies = [
     "cmocean",
     "dask",
     "fsspec",
-    "gspread",
+    "gspread<5.2",
     "loguru",
     "matplotlib",
     "netcdf4",
