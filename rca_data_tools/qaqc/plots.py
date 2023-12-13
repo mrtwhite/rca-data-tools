@@ -227,7 +227,10 @@ def run_dashboard_creation(
             )
             overlayData_near = {}
             # overlayData_near = loadNear(site)
-            
+
+            overlayData_anno = {}
+            overlayData_anno = dashboard.loadAnnotations(site)
+
             if 'PROFILER' in plotInstrument:
                 profileList = dashboard.loadProfiles(site)
                 pressureParams = (
@@ -266,6 +269,7 @@ def run_dashboard_creation(
                         profile_paramMax_local,
                         colorMap,
                         imageName_base,
+                        overlayData_anno,
                         overlayData_clim,
                         overlayData_near,
                         span,
@@ -287,7 +291,9 @@ def run_dashboard_creation(
                         profile_paramMax_local,
                         colorMap,
                         imageName_base,
+                        overlayData_anno,
                         overlayData_clim,
+                        overlayData_flag,
                         overlayData_near,
                         span,
                         spanString,
@@ -337,6 +343,7 @@ def run_dashboard_creation(
                                 profile_paramMin_local,
                                 profile_paramMax_local,
                                 imageName_base_depth,
+                                overlayData_anno,
                                 overlayData_clim_extract,
                                 overlayData_flag_extract,
                                 overlayData_near,
@@ -371,6 +378,7 @@ def run_dashboard_creation(
                     paramMin_local,
                     paramMax_local,
                     imageName_base,
+                    overlayData_anno,
                     overlayData_clim_extract,
                     overlayData_flag,
                     overlayData_near,

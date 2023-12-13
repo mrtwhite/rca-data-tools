@@ -5,7 +5,7 @@ This module contains code for creating pngs to feed into the QAQC dashboard.
 
 """
 
-#import matplotlib
+import matplotlib
 #matplotlib.rcParams['backend'] = 'TkAgg'
 #matplotlib.use("TkAgg")
 
@@ -39,6 +39,16 @@ from rca_data_tools.qaqc.utils import select_logger
 INPUT_BUCKET = "ooi-data/"
 
 
+
+def loadAnnotations(site):
+    fs = s3fs.S3FileSystem(anon=True)
+    annoFile = INPUT_BUCKET + 'annotations/' + site + '.json'
+    anno_store = fs.open(annoFile)
+    anno = json.load(anno_store)
+
+    return anno
+
+
 def pressureBracket(pressure, clim_dict):
     bracketList = []
     pressBracket = 'notFound'
@@ -56,6 +66,27 @@ def pressureBracket(pressure, clim_dict):
                 break
 
     return pressBracket
+
+
+
+def extractClimProfiles(climMonths, overlayData_clim):
+    climatology = {}
+    for climMonth in climMonths:
+        depth = []
+        climMinus3std = []
+        climPlus3std = []
+        climData = []
+        for bracket in overlayData_clim[str(climMonth)].keys():
+            depth.append(st.mean(ast.literal_eval(bracket)))
+            clim0=ast.literal_eval(overlayData_clim[str(climMonth)][bracket])[0]
+            climMinus3std.append(clim0)
+            clim1=ast.literal_eval(overlayData_clim[str(climMonth)][bracket])[1]
+            climPlus3std.append(clim1)
+            climData.append(st.mean([clim0,clim1]))
+            climatology[str(climMonth)] = {'depth':depth,'climMinus3std':climMinus3std,'climPlus3std':climPlus3std,'climData':climData}
+
+    return climatology
+
 
 
 def extractClim(timeRef, profileDepth, overlayData_clim):
@@ -108,9 +139,8 @@ def extractClim(timeRef, profileDepth, overlayData_clim):
 
 
 
-def gridProfiles(ds, pressureName, variableName, profileIndices):
-    logger = select_logger()
-    logger.info(f"creating grid profile for {variableName}")
+def gridProfiles(ds,pressureName,variableName,profileIndices):
+
     mask = (profileIndices['start'] > ds.time[0].values) & (profileIndices['end'] <= ds.time[-1].values)
     profileIndices = profileIndices.loc[mask]
 
@@ -137,7 +167,6 @@ def gridProfiles(ds, pressureName, variableName, profileIndices):
         gridY = np.arange(0, 190, 0.5) ### grid points every 0.5 meters
         gridZ = np.zeros((len(gridY),len(gridX)))
         for index, row in profileIndices.iterrows():
-
             startTime = row[start]
             endTime = row[end]
             ds_sub = ds.sel(time=slice(startTime,endTime))
@@ -350,6 +379,82 @@ def listDeployTimes(deployDict):
         
     return deployTimes
 
+
+
+def annoInRange(startDate,endDate,annoStart,annoEnd):
+    if (annoStart >= endDate) or (annoEnd is not None and annoEnd <= startDate):
+        inRange = False
+        startAnnoLine = None
+        endAnnoLine = None
+    else:
+        inRange = True
+        startAnnoLine = annoStart
+        endAnnoLine = annoEnd
+        if annoStart < startDate:
+            startAnnoLine = startDate
+        if annoEnd is None or (annoEnd is not None and annoEnd > endDate):
+            endAnnoLine = endDate
+
+    return inRange,startAnnoLine,endAnnoLine
+
+
+
+def annoXnormalize(startDate,endDate,annoMinDate,annoMaxDate):
+    annoXmin = (annoMinDate - startDate) / (endDate - startDate)
+    annoXmax =  (annoMaxDate - startDate) / (endDate - startDate)
+
+    return annoXmin,annoXmax
+
+
+
+def saveAnnos_SVG(annoLines,fileObject,fileName):
+    ET.register_namespace("", "http://www.w3.org/2000/svg")
+    # Create XML tree from the SVG file.
+    tree, xmlid = ET.XMLID(fileObject.getvalue())
+    tree.set('onload', 'init(event)')
+
+    for i in annoLines:
+        # Get the index of the shape
+        index = annoLines.index(i)
+        # Hide the tooltips
+        tooltip = xmlid[f'label_{index}']
+        tooltip.set('visibility', 'hidden')
+        # Assign onmouseover and onmouseout callbacks to patches.
+        mypatch = xmlid[f'anno_{index}']
+        mypatch.set('onmouseover', "ShowTooltip(this)")
+        mypatch.set('onmouseout', "HideTooltip(this)")
+
+    # This is the script defining the ShowTooltip and HideTooltip functions.
+    script = """
+        <script type="text/ecmascript">
+        <![CDATA[
+
+        function init(event) {
+            if ( window.svgDocument == null ) {
+                svgDocument = event.target.ownerDocument;
+                }
+            }
+
+        function ShowTooltip(obj) {
+            var cur = obj.id.split("_")[1];
+            var tip = svgDocument.getElementById('label_' + cur);
+            tip.setAttribute('visibility', "visible")
+            }
+
+        function HideTooltip(obj) {
+            var cur = obj.id.split("_")[1];
+            var tip = svgDocument.getElementById('label_' + cur);
+            tip.setAttribute('visibility', "hidden")
+            }
+
+        ]]>
+        </script>
+         """
+
+    # Insert the script at the top of the file and save it.
+    tree.insert(0, ET.XML(script))
+    ET.ElementTree(tree).write(fileName + '.svg')
+
 def plotProfilesGrid(
     Yparam,
     pressParam,
@@ -365,6 +470,7 @@ def plotProfilesGrid(
     zMax_local,
     colorMap,
     fileName_base,
+    overlayData_anno,
     overlayData_clim,
     overlayData_near,
     span,
@@ -385,7 +491,7 @@ def plotProfilesGrid(
     fileNameList = []
    
     # Plot Overlays
-    overlays = ['clim', 'near', 'time', 'none']
+    overlays = ['clim', 'anno', 'none']
 
     # Data Ranges
     ranges = ['full', 'standard', 'local']
@@ -461,10 +567,14 @@ def plotProfilesGrid(
             logger.info("contour in plotType...")
             if 'full' in params['range']:
                 graph = ax.contourf(Xx, Yy, Zz, 50, cmap=colorBar)
+                for a in graph.collections:
+                    a.set_edgecolor("face")
             else:
                 colorRange = params['vmax'] - params['vmin']
                 cbarticks = np.arange(params['vmin'],params['vmax'],colorRange/50)
                 graph = ax.contourf(Xx, Yy, Zz, cbarticks, cmap=colorBar)
+                for a in graph.collections:
+                    a.set_edgecolor("face")
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="2%", pad=0.05)
             cbar = plt.colorbar(graph, cax=cax)
@@ -474,7 +584,7 @@ def plotProfilesGrid(
             cbar.formatter.set_useOffset(False)
             cbar.ax.set_ylabel(zLabel, fontsize=4)
             cbar.ax.tick_params(length=2, width=0.5, labelsize=4)
-            
+            cbar.solids.set_edgecolor("face")
         
         if 'empty' in plotType:
             divider = make_axes_locatable(ax)
@@ -507,7 +617,7 @@ def plotProfilesGrid(
             cbar.ax.set_ylabel(zLabel, fontsize=4)
             cbar.ax.tick_params(length=2, width=0.5, labelsize=4)
             logger.info("returning fig...")
-        return fig
+        return (fig, ax)
 
     logger.info('plotting grid for timeSpan: ', span)
 
@@ -604,7 +714,7 @@ def plotProfilesGrid(
         # plot filled contours
         if zi.shape[1] > 1:
           params = {'range':'full'}
-          profilePlot = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
+          profilePlot,ax = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
           logger.info("created profilePlot object")
           if 'deploy' in spanString:
               plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
@@ -614,7 +724,7 @@ def plotProfilesGrid(
           params = {'range':'standard'}
           params['vmin'] = zMin
           params['vmax'] = zMax
-          profilePlot = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
+          profilePlot,ax = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
           if 'deploy' in spanString:
               plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
           profilePlot.savefig(fileName + '_standard.png', dpi=300)
@@ -622,7 +732,7 @@ def plotProfilesGrid(
           params = {'range':'local'}
           params['vmin'] = zMin_local
           params['vmax'] = zMax_local
-          profilePlot = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
+          profilePlot,ax = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
           if 'deploy' in spanString:
               plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
           profilePlot.savefig(fileName + '_local.png', dpi=300)
@@ -630,7 +740,7 @@ def plotProfilesGrid(
           emptySlice = 'no'
         else:
             params = {'range':'full'}
-            profilePlot = plotter(0, 0, 0, 'empty', colorMap, 'Insufficient Profiles Found For Gridding', params)
+            profilePlot,ax = plotter(0, 0, 0, 'empty', colorMap, 'Insufficient Profiles Found For Gridding', params)
             fileName = fileName_base + '_' + spanString + '_' + 'none'
             profilePlot.savefig(fileName + '_full.png', dpi=300)
             fileNameList.append(fileName + '_full.png')
@@ -641,7 +751,7 @@ def plotProfilesGrid(
             emptySlice = 'yes'
     else:
         params = {'range':'full'}
-        profilePlot = plotter(0, 0, 0, 'empty', colorMap, 'No Data Available', params)
+        profilePlot,ax = plotter(0, 0, 0, 'empty', colorMap, 'No Data Available', params)
         fileName = fileName_base + '_' + spanString + '_' + 'none'
         profilePlot.savefig(fileName + '_full.png', dpi=300)
         fileNameList.append(fileName + '_full.png')
@@ -653,6 +763,106 @@ def plotProfilesGrid(
 
     if 'no' in emptySlice:
         for overlay in overlays:
+            if 'anno' in overlay:
+                if overlayData_anno:
+                    plotAnnotations = {}
+                    for i in overlayData_anno:
+                        annoStart = datetime.fromtimestamp(int(i['beginDT'])/1000)
+                        if i['endDT'] is not None:
+                            annoEnd = datetime.fromtimestamp(int(i['endDT'])/1000)
+                        else:
+                            annoEnd = i['endDT']
+                        inRange,startAnnoLine,endAnnoLine = annoInRange(startDate,endDate,annoStart,annoEnd)
+                        if inRange:
+                            plotAnnotations[startAnnoLine] = {'endAnnoLine': endAnnoLine, 'annotation': i['annotation']}
+                    params = {'range':'full'}
+                    profilePlot,ax = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
+                    if 'deploy' in spanString:
+                            plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
+                    if plotAnnotations:
+                        annoLines = []
+                        i = 0
+                        for k in plotAnnotations.keys():
+                            annoXmin,annoXmax = annoXnormalize(startDate,endDate,k,plotAnnotations[k]['endAnnoLine'])
+                            A = ax.axhline(yMax,annoXmin,annoXmax,linewidth=3,color='r',linestyle='-')
+                            A.set_gid(f'anno_{i}')
+                            annoLines.append(A)
+                            annotationString = tw.fill(tw.dedent(plotAnnotations[k]['annotation'].rstrip()), width=50)
+                            annoText = ax.annotate(annotationString,
+                                       xy=(k,yMin),xytext=(0.25,0.25), textcoords='axes fraction',
+                                       bbox=dict(boxstyle='round',fc='w'),wrap=True,fontsize=5,
+                                       zorder = 1, clip_on=True
+                            )
+                            annoText.set_gid(f'label_{i}')
+                            i += 1
+                        f=BytesIO()
+                        plt.savefig(f, format="svg",dpi=300)
+                        fileName = fileName_base + '_' + spanString + '_' + 'anno_full'
+                        saveAnnos_SVG(annoLines,f,fileName)
+                    else:
+                        fileName = fileName_base + '_' + spanString + '_' + 'anno_full'
+                        profilePlot.savefig(fileName + '.png', dpi=300)
+
+                    params = {'range':'standard'}
+                    params['vmin'] = zMin
+                    params['vmax'] = zMax
+                    profilePlot,ax = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
+                    if 'deploy' in spanString:
+                            plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
+                    if plotAnnotations:
+                        annoLines = []
+                        i = 0
+                        for k in plotAnnotations.keys():
+                            annoXmin,annoXmax = annoXnormalize(startDate,endDate,k,plotAnnotations[k]['endAnnoLine'])
+                            A = ax.axhline(yMax,annoXmin,annoXmax,linewidth=3,color='r',linestyle='-')
+                            A.set_gid(f'anno_{i}')
+                            annoLines.append(A)
+                            annotationString = tw.fill(tw.dedent(plotAnnotations[k]['annotation'].rstrip()), width=50)
+                            annoText = ax.annotate(annotationString,
+                                       xy=(k,yMin),xytext=(0.25,0.25), textcoords='axes fraction',
+                                       bbox=dict(boxstyle='round',fc='w'),wrap=True,fontsize=5,
+                                       zorder = 1, clip_on=True
+                            )
+                            annoText.set_gid(f'label_{i}')
+                            i += 1
+                        f=BytesIO()
+                        plt.savefig(f, format="svg",dpi=300)
+                        fileName = fileName_base + '_' + spanString + '_' + 'anno_standard'
+                        saveAnnos_SVG(annoLines,f,fileName)
+                    else:
+                        fileName = fileName_base + '_' + spanString + '_' + 'anno_standard'
+                        profilePlot.savefig(fileName + '.png', dpi=300)
+
+                    params = {'range':'local'}
+                    params['vmin'] = zMin_local
+                    params['vmax'] = zMax_local
+                    profilePlot,ax = plotter(xiDT, yi, zi, 'contour', colorMap, 'no', params)
+                    if 'deploy' in spanString:
+                            plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
+                    if plotAnnotations:
+                        annoLines = []
+                        i = 0
+                        for k in plotAnnotations.keys():
+                            annoXmin,annoXmax = annoXnormalize(startDate,endDate,k,plotAnnotations[k]['endAnnoLine'])
+                            A = ax.axhline(yMax,annoXmin,annoXmax,linewidth=3,color='r',linestyle='-')
+                            A.set_gid(f'anno_{i}')
+                            annoLines.append(A)
+                            annotationString = tw.fill(tw.dedent(plotAnnotations[k]['annotation'].rstrip()), width=50)
+                            annoText = ax.annotate(annotationString,
+                                       xy=(k,yMin),xytext=(0.25,0.25), textcoords='axes fraction',
+                                       bbox=dict(boxstyle='round',fc='w'),wrap=True,fontsize=5,
+                                       zorder = 1, clip_on=True
+                            )
+                            annoText.set_gid(f'label_{i}')
+                            i += 1
+                        f=BytesIO()
+                        plt.savefig(f, format="svg",dpi=300)
+                        fileName = fileName_base + '_' + spanString + '_' + 'anno_local'
+                        saveAnnos_SVG(annoLines,f,fileName)
+                    else:
+                        fileName = fileName_base + '_' + spanString + '_' + 'anno_local'
+                        profilePlot.savefig(fileName + '.png', dpi=300)
+
             if 'clim' in overlay:
                 if overlayData_clim:
                     logger.info("clim overlay...")
@@ -764,8 +974,8 @@ def plotProfilesGrid(
                         climParams['vmax'] = climDiffMax
                         logger.info("entering climPlot plotter")
                         climPlot = plotter(xiDT, yi, climDiff, 'clim', colorMapStandard, 'no', climParams)
-                        logger.info("climPlot succesful")
-  
+                        logger.info("climPlot successful")
+
                     else:
                         # plot filled contours
                         climParams = {}
@@ -775,8 +985,8 @@ def plotProfilesGrid(
                         climParams['vmax'] = climDiffMax
                         logger.info("entering climPlot plotter")
                         climPlot = plotter(xiDT, yi, climDiff, 'clim', colorMapStandard, 'no', climParams)
-                        logger.info("climPlot succesful")
-       
+                        logger.info("climPlot successful")
+
                     if 'deploy' in spanString:
                         plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
                     climPlot.savefig(fileName + '_standard.png', dpi=300)
@@ -787,7 +997,7 @@ def plotProfilesGrid(
                 else:
                     logger.info('climatology is empty!')
                     params = {'range':'full'}
-                    profilePlot = plotter(0, 0, 0, 'empty', colorMap, 'No Climatology Data Available', params)
+                    profilePlot,ax = plotter(0, 0, 0, 'empty', colorMap, 'No Climatology Data Available', params)
                     fileName = fileName_base + '_' + spanString + '_' + 'clim'
                     profilePlot.savefig(fileName + '_full.png', dpi=300)
                     fileNameList.append(fileName + '_full.png')
@@ -800,14 +1010,16 @@ def plotProfilesGrid(
     else:
         params = {'range':'full'}
         logger.info("saving files and created fileNameList...")
-        profilePlot = plotter(0, 0, 0, 'empty', colorMap, 'No Data Available', params)
-        fileName = fileName_base + '_' + spanString + '_' + 'clim'
-        profilePlot.savefig(fileName + '_full.png', dpi=300)
-        fileNameList.append(fileName + '_full.png')
-        profilePlot.savefig(fileName + '_standard.png', dpi=300)
-        fileNameList.append(fileName + '_standard.png')
-        profilePlot.savefig(fileName + '_local.png', dpi=300)
-        fileNameList.append(fileName + '_local.png')
+        profilePlot,ax = plotter(0, 0, 0, 'empty', colorMap, 'No Data Available', params)
+        for overlay in overlays:
+            if 'none' not in overlay:
+                fileName = fileName_base + '_' + spanString + '_' + overlay
+                profilePlot.savefig(fileName + '_full.png', dpi=300)
+                fileNameList.append(fileName + '_full.png')
+                profilePlot.savefig(fileName + '_standard.png', dpi=300)
+                fileNameList.append(fileName + '_standard.png')
+                profilePlot.savefig(fileName + '_local.png', dpi=300)
+                fileNameList.append(fileName + '_local.png')
 
     return fileNameList
 
@@ -825,9 +1037,10 @@ def plotProfilesScatter(
     profile_paramMax,
     profile_paramMin_local,
     profile_paramMax_local,
-    colorMap,
     fileName_base,
+    overlayData_anno,
     overlayData_clim,
+    overlayData_flag,
     overlayData_near,
     span,
     spanString,
@@ -835,11 +1048,11 @@ def plotProfilesScatter(
     statusDict,
     site,
     ):
-    
+
     logger=select_logger()
     logger.info("entering plotProfilesScatter")
     # Plot Overlays
-    overlays = ['clim', 'flag', 'near', 'time', 'none']
+    overlays = ['anno', 'clim', 'flag', 'near', 'none']
 
     # Data Ranges
     ranges = ['full', 'standard', 'local']
@@ -897,6 +1110,116 @@ def plotProfilesScatter(
         
         ax.grid(False)
         return (fig, ax)
+
+
+
+    def plotOverlays(overlay,figureHandle,axHandle,fileName,timeSpan):
+        fileName = fileName.replace('none',overlay)
+        if 'anno' in overlay:
+            if overlayData_anno:
+                plotAnnotations = {}
+                for i in overlayData_anno:
+                    annoStart = datetime.fromtimestamp(int(i['beginDT'])/1000)
+                    if i['endDT'] is not None:
+                        annoEnd = datetime.fromtimestamp(int(i['endDT'])/1000)
+                    else:
+                        annoEnd = i['endDT']
+                    inRange,startAnnoLine,endAnnoLine = annoInRange(startDate,endDate,annoStart,annoEnd)
+                    if inRange:
+                        plotAnnotations[startAnnoLine] = {'endAnnoLine': endAnnoLine, 'annotation': i['annotation']}
+                if plotAnnotations:
+                    annoLines = []
+                    i = 0
+                    yLimits = plt.gca().get_ylim()
+                    xLimits = plt.gca().get_xlim()
+                    j = len(plotAnnotations)
+                    annoLineColors = ['#1f78b4','#a6cee3','#b2df8a','#33a02c','#ff7f00','#fdbf6f','#e31a1c','#fb9a99','#542c2c','#6e409c']
+                    for k in plotAnnotations.keys():
+                        A = axHandle.axhline(yLimits[0]+3+(i*10),0.75,1,linewidth=3,color=annoLineColors[i],linestyle='-')
+                        A.set_gid(f'anno_{i}')
+                        annoLines.append(A)
+                        annotationString = tw.fill(tw.dedent(plotAnnotations[k]['annotation'].rstrip()), width=50)
+                        annoText = axHandle.annotate(annotationString,
+                                   xy=(xLimits[0],yLimits[0]),xytext=(0.25,0.25), textcoords='axes fraction',
+                                   bbox=dict(boxstyle='round',fc='w'),wrap=True,fontsize=5,
+                                   zorder = 1, clip_on=True
+                        )
+                        annoText.set_gid(f'label_{i}')
+                        i += 1
+                    f=BytesIO()
+                    figureHandle.savefig(f, format="svg",dpi=300)
+                    saveAnnos_SVG(annoLines,f,fileName)
+                    for child in axHandle.get_children():
+                        if isinstance(child, matplotlib.text.Annotation):
+                            child.remove()
+                        if isinstance(child, matplotlib.lines.Line2D):
+                            child.remove()
+                else:
+                    figureHandle.savefig(fileName + '.png', dpi=300)
+
+        elif 'clim' in overlay:
+            climMonths = sorted(set(range(pd.to_datetime(timeSpan[0]).month,(pd.to_datetime(timeSpan[1]).month) + 1)))
+            climatology = extractClimProfiles(climMonths, overlayData_clim)
+            xLimits = plt.gca().get_xlim()
+            for climMonth in climMonths:
+                climDepth = [-x for x in climatology[str(climMonth)]['depth']]
+                climLine = plt.plot(climatology[str(climMonth)]['climData'],climDepth,
+                    '-.',color='r',alpha=0.4,linewidth=0.25)
+            plt.xlim(xLimits[0], xLimits[1])
+            figureHandle.savefig(fileName + '.png', dpi=300)
+            for child in axHandle.get_children():
+                if isinstance(child, matplotlib.lines.Line2D):
+                    child.remove()
+
+        elif 'flag' in overlay:
+            qcDS = overlayData_flag.sel(time=slice(startDate, endDate))
+            qcDS = retrieve_qc(qcDS)
+            flags = {
+                    'qartod_grossRange':{'symbol':'+', 'param':'_qartod_executed_gross_range_test'},
+                    'qartod_climatology':{'symbol':'x','param':'_qartod_executed_climatology_test'},
+                    #'qartod_summary':{'symbol':'1','param':'_qartod_results'},
+                    'qc':{'symbol':'s','param':'_qc_summary_flag'},
+                }
+            for flagType in flags.keys():
+                flagString = Xparam + flags[flagType]['param']
+                if flagString in qcDS:
+                    flagStatus = {'fail':{'value':4,'color':'r'}, 'suspect':{'value':3,'color':'y'}}
+                    for level in flagStatus.keys():
+                        flaggedDS = qcDS.where((qcDS[flagString] == flagStatus[level]['value']).compute(), drop=True)
+                        flag_X = flaggedDS.time.values
+                        if len(flag_X) > 0:
+                            n = len(flag_X)
+                            legendString = f'{flagType} {level}: {n} points'
+                            flag_Y = flaggedDS[Yparam].values
+                            flagLine = plt.plot(flag_X,flag_Y,flags[flagType]['symbol'],color=flagStatus[level]['color'],
+                            	    markersize=flagMarker,label='%s' % legendString,
+                            	    )
+                        else:
+                            legendString = f'{flagType} {level}: no points flagged'
+                            flagLine = plt.plot([0],[0],color='w',markersize=0,label='%s' % legendString,)
+                else:
+                    print('no paramters found for ',flagString)
+                    legendString = f'no {flagType} flags found'
+                    flagLine = plt.plot([0],[0],alpha=0,markersize=0,label='%s' % legendString,)
+
+            # generating custom legend
+            handles, labels = ax.get_legend_handles_labels()
+            patches = []
+            for handle, label in zip(handles, labels):
+                patches.append(
+                    mlines.Line2D([],[],color=handle.get_color(),marker=handle.get_marker(),
+                            markersize=1,linewidth=0,label=label)
+                    )
+            legend = ax.legend(handles=patches, loc="upper right", fontsize=3)
+            figureHandle.savefig(fileName + '.png', dpi=300)
+            legend.remove()
+            for child in axHandle.get_children():
+                if isinstance(child, matplotlib.lines.Line2D):
+                    child.remove()
+
+
+        return
+
 
 
     logger.info('plotting profiles for timeSpan: ', span)
@@ -966,6 +1289,7 @@ def plotProfilesScatter(
             
             ### Plot all profiles on one plot
             fig, ax = setPlot()
+            plotOverlay = False
             if plot_pre:
                 plt.scatter(scatterX_pre,scatterY_pre, s=1, c=scatterZ_pre,cmap='Greens')
                 timeString = np.datetime_as_string(scatterZ_pre[0],unit='D') + ' - ' + np.datetime_as_string(scatterZ_pre[-1],unit='D')
@@ -986,11 +1310,33 @@ def plotProfilesScatter(
             logger.info("saving scatter plots")
             fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
             fig.savefig(fileName + '_full.png', dpi=300)
+            if plot_pre and plot_post:
+                timeSpan = [scatterZ_pre[0],scatterZ_post[-1]]
+                plotOverlay = True
+            elif plot_pre and not plot_post:
+                timeSpan = [scatterZ_pre[0],scatterZ_pre[-1]]
+                plotOverlay = True
+            elif not plot_pre and plot_post:
+                timeSpan = [scatterZ_post[0],scatterZ_post[-1]]
+                plotOverlay = True
+            if plotOverlay:
+                overlayFileName = fileName + '_full'
+                for overlay in overlays:
+                    plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
             ax.set_xlim(profile_paramMin, profile_paramMax)
             fig.savefig(fileName + '_standard.png', dpi=300)
+            if plotOverlay:
+                overlayFileName = fileName + '_standard'
+                for overlay in overlays:
+                    plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
             ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
             fig.savefig(fileName + '_local.png', dpi=300)
-            
+            if plotOverlay:
+                overlayFileName = fileName + '_local'
+                for overlay in overlays:
+                    plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
+
+
             profileIterator += 1
             iterList_pre = []
             iterList_post = []
@@ -1003,6 +1349,7 @@ def plotProfilesScatter(
                 
             for spanIter in iterList:
                 fig, ax = setPlot()
+                plotOverlay = False
                 if plot_pre:
                     scatterX_pre = np.concatenate( [ dataDict_pre[i]['scatterX'] for i in dataDict_pre.keys() if (i.week == spanIter) ] )
                     scatterY_pre = np.concatenate( [ dataDict_pre[i]['scatterY'] for i in dataDict_pre.keys() if (i.week == spanIter) ] )
@@ -1026,11 +1373,20 @@ def plotProfilesScatter(
 
                 fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
                 fig.savefig(fileName + '_full.png', dpi=300)
+                overlayFileName = fileName + '_full'
+                for overlay in overlays:
+                    plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
                 ax.set_xlim(profile_paramMin, profile_paramMax)
                 fig.savefig(fileName + '_standard.png', dpi=300)
+                overlayFileName = fileName + '_standard'
+                for overlay in overlays:
+                    plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
                 ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
                 fig.savefig(fileName + '_local.png', dpi=300)
-                profileIterator += 1        
+                overlayFileName = fileName + '_local'
+                for overlay in overlays:
+                    plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
+                profileIterator += 1
                 
             
         else:
@@ -1060,6 +1416,7 @@ def plotProfilesScatter(
         
                 ### Plot all profiles on one plot
                 fig, ax = setPlot()
+                plotOverlay = False
                 if plot_all:
                     if len(profiles) == 1:
                         plt.plot(scatterX,scatterY,'.',color='#1f78b4',markersize=1)
@@ -1071,16 +1428,30 @@ def plotProfilesScatter(
                         timeString = np.datetime_as_string(scatterZ[0],unit='D') + ' - ' + np.datetime_as_string(scatterZ[-1],unit='D')
                     timeString = timeString.replace('T',' ')    
                     plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
+                    plotOverlay = True
                 else:
                     plt.annotate('No Data Available', xy=(0.3, 0.5), xycoords='axes fraction')
                     
                 
                 fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
                 fig.savefig(fileName + '_full.png', dpi=300)
+                if plotOverlay:
+                    timeSpan = [scatterZ[0], scatterZ[-1]]
+                    overlayFileName = fileName + '_full'
+                    for overlay in overlays:
+                        plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
                 ax.set_xlim(profile_paramMin, profile_paramMax)
                 fig.savefig(fileName + '_standard.png', dpi=300)
+                if plotOverlay:
+                    overlayFileName = fileName + '_standard'
+                    for overlay in overlays:
+                        plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
                 ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
                 fig.savefig(fileName + '_local.png', dpi=300)
+                if plotOverlay:
+                    overlayFileName = fileName + '_local'
+                    for overlay in overlays:
+                        plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
 
                 if dataDict:
                     if 'day' in spanString:
@@ -1092,10 +1463,20 @@ def plotProfilesScatter(
                             plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
                             fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
                             fig.savefig(fileName + '_full.png', dpi=300)
+                            timeSpan = key
+                            overlayFileName = fileName + '_full'
+                            for overlay in overlays:
+                                plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
                             ax.set_xlim(profile_paramMin, profile_paramMax)
                             fig.savefig(fileName + '_standard.png', dpi=300)
+                            overlayFileName = fileName + '_standard'
+                            for overlay in overlays:
+                                plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
                             ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
                             fig.savefig(fileName + '_local.png', dpi=300)
+                            overlayFileName = fileName + '_local'
+                            for overlay in overlays:
+                                plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
                             profileIterator += 1
                     elif 'week' in spanString:
                         profileIterator += 1 
@@ -1112,10 +1493,20 @@ def plotProfilesScatter(
                                 plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
                                 fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
                                 fig.savefig(fileName + '_full.png', dpi=300)
+                                timeSpan = [scatterZ_sub[0],scatterZ_sub[-1]]
+                                overlayFileName = fileName + '_full'
+                                for overlay in overlays:
+                                    plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
                                 ax.set_xlim(profile_paramMin, profile_paramMax)
                                 fig.savefig(fileName + '_standard.png', dpi=300)
+                                overlayFileName = fileName + '_standard'
+                                for overlay in overlays:
+                                    plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
                                 ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
                                 fig.savefig(fileName + '_local.png', dpi=300)
+                                overlayFileName = fileName + '_local'
+                                for overlay in overlays:
+                                    plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
                                 profileIterator += 1
                     elif 'month' in spanString:
                         profileIterator += 1
@@ -1133,10 +1524,20 @@ def plotProfilesScatter(
                                 plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
                                 fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
                                 fig.savefig(fileName + '_full.png', dpi=300)
+                                timeSpan = [scatterZ_sub[0],scatterZ_sub[-1]]
+                                overlayFileName = fileName + '_full'
+                                for overlay in overlays:
+                                    plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
                                 ax.set_xlim(profile_paramMin, profile_paramMax)
                                 fig.savefig(fileName + '_standard.png', dpi=300)
+                                overlayFileName = fileName + '_standard'
+                                for overlay in overlays:
+                                    plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
                                 ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
                                 fig.savefig(fileName + '_local.png', dpi=300)
+                                overlayFileName = fileName + '_local'
+                                for overlay in overlays:
+                                    plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
                                 profileIterator += 1
                     elif 'year' in spanString:
                         profileIterator += 1
@@ -1154,10 +1555,20 @@ def plotProfilesScatter(
                                 plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
                                 fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
                                 fig.savefig(fileName + '_full.png', dpi=300)
+                                timeSpan = [scatterZ_sub[0],scatterZ_sub[-1]]
+                                overlayFileName = fileName + '_full'
+                                for overlay in overlays:
+                                    plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
                                 ax.set_xlim(profile_paramMin, profile_paramMax)
                                 fig.savefig(fileName + '_standard.png', dpi=300)
+                                overlayFileName = fileName + '_standard'
+                                for overlay in overlays:
+                                    plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
                                 ax.set_xlim(profile_paramMin_local, profile_paramMax_local)
                                 fig.savefig(fileName + '_local.png', dpi=300)
+                                overlayFileName = fileName + '_local'
+                                for overlay in overlays:
+                                    plotOverlays(overlay,fig,ax,overlayFileName,timeSpan)
                                 profileIterator += 1
             else:            
                 fig,ax = setPlot()
@@ -1186,6 +1597,7 @@ def plotScatter(
     yMin_local,
     yMax_local,
     fileName_base,
+    overlayData_anno,
     overlayData_clim,
     overlayData_flag,
     overlayData_near,
@@ -1199,7 +1611,7 @@ def plotScatter(
     fileNameList = []
 
     # Plot Overlays
-    overlays = ['clim', 'flag', 'near', 'time', 'none']
+    overlays = ['anno','clim','flag', 'near', 'time', 'none']
 
     # Data Ranges
     ranges = ['full', 'standard', 'local']
@@ -1314,7 +1726,7 @@ def plotScatter(
     if 'deploy' in spanString:
         plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
     plt.xlim(xMin, xMax)
-    # ylim_current = plt.gca().get_ylim()
+    ylim_full = plt.gca().get_ylim()
     if scatterX.size == 0:
         print('slice is empty!')
         plt.annotate(
@@ -1337,8 +1749,76 @@ def plotScatter(
     fig.savefig(fileName + '_local.png', dpi=300)
     fileNameList.append(fileName + '_local.png')
 
+    plotYranges={}
+    plotYranges['full']={'yMin': ylim_full[0], 'yMax':ylim_full[1]}
+    plotYranges['standard'] = {'yMin': yMin, 'yMax': yMax}
+    plotYranges['local'] = {'yMin': yMin_local, 'yMax': yMax_local}
+
 
     for overlay in overlays:
+        if 'anno' in overlay:
+            print('adding annotations to plot')
+            for plotRange in ranges:
+                plotYmin = plotYranges[plotRange]['yMin']
+                plotYmax = plotYranges[plotRange]['yMax']
+                fig, ax = setPlot()
+                if 'no' in emptySlice:
+                    if 'large' in plotMarkerSize:
+                        plt.plot(scatterX, scatterY, '.', color=lineColors[0], markersize=2, rasterized=True)
+                    elif 'medium' in plotMarkerSize:
+                        plt.plot(scatterX, scatterY, '.', color=lineColors[0], markersize=0.75, rasterized=True)
+                    elif 'small' in plotMarkerSize:
+                        plt.plot(scatterX, scatterY, ',', color=lineColors[0], rasterized=True)
+                    if 'deploy' in spanString:
+                        plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.', rasterized=True)
+                    plt.xlim(xMin, xMax)
+                if 'yes' in emptySlice:
+                    plt.annotate(
+                        'No Data Available', xy=(0.3, 0.5), xycoords='axes fraction'
+                    )
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes("right", size="2%", pad=0.05)
+                for axis in ['top','bottom','left','right']:
+                    cax.spines[axis].set_linewidth(0)
+                cax.set_xticks([])
+                cax.set_yticks([])
+                ax.set_ylim(plotYmin, plotYmax)
+                if overlayData_anno:
+                    plotAnnotations = {}
+                    for i in overlayData_anno:
+                        annoStart = datetime.fromtimestamp(int(i['beginDT'])/1000)
+                        if i['endDT'] is not None:
+                            annoEnd = datetime.fromtimestamp(int(i['endDT'])/1000)
+                        else:
+                            annoEnd = i['endDT']
+                        inRange,startAnnoLine,endAnnoLine = annoInRange(startDate,endDate,annoStart,annoEnd)
+                        if inRange:
+                            plotAnnotations[startAnnoLine] = {'endAnnoLine': endAnnoLine, 'annotation': i['annotation']}
+                    if plotAnnotations:
+                        annoLines = []
+                        i = 0
+                        for k in plotAnnotations.keys():
+                            annoXmin,annoXmax = annoXnormalize(startDate,endDate,k,plotAnnotations[k]['endAnnoLine'])
+                            A = ax.axhline(plotYmin,annoXmin,annoXmax,linewidth=3,color='r',linestyle='-')
+                            A.set_gid(f'anno_{i}')
+                            annoLines.append(A)
+                            annotationString = tw.fill(tw.dedent(plotAnnotations[k]['annotation'].rstrip()), width=50)
+                            annoText = ax.annotate(annotationString,
+                                       xy=(k,plotYmin),xytext=(0.25,0.25), textcoords='axes fraction',
+                                       bbox=dict(boxstyle='round',facecolor='white'),wrap=True,fontsize=5,
+                                       zorder = 20, clip_on=True
+                            )
+                            annoText.set_gid(f'label_{i}')
+                            i += 1
+                        f=BytesIO()
+                        plt.savefig(f, format="svg",dpi=300)
+                        fileName = fileName_base + '_' + spanString + '_' + 'anno_' + plotRange
+                        saveAnnos_SVG(annoLines,f,fileName)
+                else:
+                    fileName = fileName_base + '_' + spanString + '_' + 'anno_' + plotRange
+                    fig.savefig(fileName + '.png', dpi=300)
+
+
         if 'time' in overlay:
             fig, ax = setPlot()
             
