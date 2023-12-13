@@ -33,6 +33,8 @@ from matplotlib.colors import ListedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import cmocean # noqa
 from scipy.interpolate import griddata
+import textwrap as tw
+import xml.etree.ElementTree as et
 
 from rca_data_tools.qaqc.utils import select_logger
 
@@ -193,7 +195,7 @@ def gridProfiles(ds,pressureName,variableName,profileIndices):
                     gridZ[:,index] = np.nan
             else:
                 gridZ[:,index] = np.nan
-                
+
     return(gridX,gridY,gridZ)
 
     
@@ -408,9 +410,9 @@ def annoXnormalize(startDate,endDate,annoMinDate,annoMaxDate):
 
 
 def saveAnnos_SVG(annoLines,fileObject,fileName):
-    ET.register_namespace("", "http://www.w3.org/2000/svg")
+    et.register_namespace("", "http://www.w3.org/2000/svg")
     # Create XML tree from the SVG file.
-    tree, xmlid = ET.XMLID(fileObject.getvalue())
+    tree, xmlid = et.XMLID(fileObject.getvalue())
     tree.set('onload', 'init(event)')
 
     for i in annoLines:
@@ -452,8 +454,8 @@ def saveAnnos_SVG(annoLines,fileObject,fileName):
          """
 
     # Insert the script at the top of the file and save it.
-    tree.insert(0, ET.XML(script))
-    ET.ElementTree(tree).write(fileName + '.svg')
+    tree.insert(0, et.XML(script))
+    et.ElementTree(tree).write(fileName + '.svg')
 
 def plotProfilesGrid(
     Yparam,
@@ -795,7 +797,7 @@ def plotProfilesGrid(
                             )
                             annoText.set_gid(f'label_{i}')
                             i += 1
-                        f=BytesIO()
+                        f=io.BytesIO()
                         plt.savefig(f, format="svg",dpi=300)
                         fileName = fileName_base + '_' + spanString + '_' + 'anno_full'
                         saveAnnos_SVG(annoLines,f,fileName)
@@ -825,7 +827,7 @@ def plotProfilesGrid(
                             )
                             annoText.set_gid(f'label_{i}')
                             i += 1
-                        f=BytesIO()
+                        f=io.BytesIO()
                         plt.savefig(f, format="svg",dpi=300)
                         fileName = fileName_base + '_' + spanString + '_' + 'anno_standard'
                         saveAnnos_SVG(annoLines,f,fileName)
@@ -855,7 +857,7 @@ def plotProfilesGrid(
                             )
                             annoText.set_gid(f'label_{i}')
                             i += 1
-                        f=BytesIO()
+                        f=io.BytesIO()
                         plt.savefig(f, format="svg",dpi=300)
                         fileName = fileName_base + '_' + spanString + '_' + 'anno_local'
                         saveAnnos_SVG(annoLines,f,fileName)
@@ -1146,7 +1148,7 @@ def plotProfilesScatter(
                         )
                         annoText.set_gid(f'label_{i}')
                         i += 1
-                    f=BytesIO()
+                    f=io.BytesIO()
                     figureHandle.savefig(f, format="svg",dpi=300)
                     saveAnnos_SVG(annoLines,f,fileName)
                     for child in axHandle.get_children():
@@ -1810,7 +1812,7 @@ def plotScatter(
                             )
                             annoText.set_gid(f'label_{i}')
                             i += 1
-                        f=BytesIO()
+                        f=io.BytesIO()
                         plt.savefig(f, format="svg",dpi=300)
                         fileName = fileName_base + '_' + spanString + '_' + 'anno_' + plotRange
                         saveAnnos_SVG(annoLines,f,fileName)
