@@ -1192,9 +1192,9 @@ def plotProfilesScatter(
                         if len(flag_X) > 0:
                             n = len(flag_X)
                             legendString = f'{flagType} {level}: {n} points'
-                            flag_Y = flaggedDS[Yparam].values
+                            flag_Y = flaggedDS[Xparam].values
                             flagLine = plt.plot(flag_X,flag_Y,flags[flagType]['symbol'],color=flagStatus[level]['color'],
-                            	    markersize=flagMarker,label='%s' % legendString,
+                            	    markersize=1,label='%s' % legendString,
                             	    )
                         else:
                             legendString = f'{flagType} {level}: no points flagged'

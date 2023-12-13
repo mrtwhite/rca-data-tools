@@ -289,7 +289,6 @@ def run_dashboard_creation(
                         profile_paramMax,
                         profile_paramMin_local,
                         profile_paramMax_local,
-                        colorMap,
                         imageName_base,
                         overlayData_anno,
                         overlayData_clim,
