@@ -265,7 +265,7 @@ def loadQARTOD(refDes, param, sensorType, logger=select_logger()):
                  'sea_water_practical_salinity':'practical_salinity',
                  'sea_water_pressure':'seawater_pressure',
                  'sea_water_density':'density',
-                 'ph_seawater':'seawater_ph',
+                 #'ph_seawater':'seawater_ph',
                  }
 
     if param in renameMap:
