@@ -1120,7 +1120,6 @@ def plotProfilesScatter(
 
 
     def plotOverlays(overlay,figureHandle,axHandle,fileName,timeSpan):
-        print(timeSpan)
         fileName = fileName.replace('none',overlay)
         if 'anno' in overlay:
             if overlayData_anno:
@@ -1169,11 +1168,9 @@ def plotProfilesScatter(
         elif 'clim' in overlay:
             climatology = {}
             if isinstance(timeSpan, list):
-                print('extracting mulitple timestamps')
                 climMonths = sorted(set(range(pd.to_datetime(timeSpan[0]).month,(pd.to_datetime(timeSpan[1]).month) + 1)))
                 climatology = extractClimProfiles(climMonths, overlayData_clim)
             elif isinstance(timeSpan, pd.Timestamp):
-                print('extracting single timestamp')
                 climMonths = []
                 climMonths.append(pd.to_datetime(timeSpan).month)
                 climatology = extractClimProfiles(climMonths, overlayData_clim)
