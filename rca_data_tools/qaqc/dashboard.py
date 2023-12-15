@@ -947,7 +947,7 @@ def plotProfilesGrid(
                     if 'deploy' in spanString:
                         plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
                     fileName = fileName_base + '_' + spanString + '_' + 'clim'
-                    climPlot.savefig(fileName + '_full.png', dpi=300)
+                    plt.savefig(fileName + '_full.png', dpi=300)
                     fileNameList.append(fileName + '_full.png')
 
                     climDiffMin = np.nanmin(climDiff)
@@ -992,9 +992,9 @@ def plotProfilesGrid(
 
                     if 'deploy' in spanString:
                         plt.axvline(timeRef_deploy,linewidth=1,color='k',linestyle='-.')
-                    climPlot.savefig(fileName + '_standard.png', dpi=300)
+                    plt.savefig(fileName + '_standard.png', dpi=300)
                     fileNameList.append(fileName + '_standard.png')
-                    climPlot.savefig(fileName + '_local.png', dpi=300)
+                    plt.savefig(fileName + '_local.png', dpi=300)
                     fileNameList.append(fileName + '_local.png')
 
                 else:
@@ -1120,6 +1120,7 @@ def plotProfilesScatter(
 
 
     def plotOverlays(overlay,figureHandle,axHandle,fileName,timeSpan):
+        print(timeSpan)
         fileName = fileName.replace('none',overlay)
         if 'anno' in overlay:
             if overlayData_anno:
@@ -1166,8 +1167,16 @@ def plotProfilesScatter(
                     fileNameList.append(fileName + '.png')
 
         elif 'clim' in overlay:
-            climMonths = sorted(set(range(pd.to_datetime(timeSpan[0]).month,(pd.to_datetime(timeSpan[1]).month) + 1)))
-            climatology = extractClimProfiles(climMonths, overlayData_clim)
+            climatology = {}
+            if isinstance(timeSpan, list):
+                print('extracting mulitple timestamps')
+                climMonths = sorted(set(range(pd.to_datetime(timeSpan[0]).month,(pd.to_datetime(timeSpan[1]).month) + 1)))
+                climatology = extractClimProfiles(climMonths, overlayData_clim)
+            elif isinstance(timeSpan, pd.Timestamp):
+                print('extracting single timestamp')
+                climMonths = []
+                climMonths.append(pd.to_datetime(timeSpan).month)
+                climatology = extractClimProfiles(climMonths, overlayData_clim)
             if climatology:
                 xLimits = plt.gca().get_xlim()
                 for climMonth in climMonths:
