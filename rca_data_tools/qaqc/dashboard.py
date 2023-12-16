@@ -1202,12 +1202,12 @@ def plotProfilesScatter(
                     flagStatus = {'fail':{'value':4,'color':'r'}, 'suspect':{'value':3,'color':'y'}}
                     for level in flagStatus.keys():
                         flaggedDS = qcDS.where((qcDS[flagString] == flagStatus[level]['value']).compute(), drop=True)
-                        flag_X = flaggedDS.time.values
+                        flag_X = flaggedDS[Xparam].values
                         if len(flag_X) > 0:
                             n = len(flag_X)
                             legendString = f'{flagType} {level}: {n} points'
                             flag_Y = flaggedDS[Xparam].values
-                            flagLine = plt.plot(flag_X,flag_Y,flags[flagType]['symbol'],color=flagStatus[level]['color'],
+                            flagLine = plt.plot(flag_X,-flag_Y,flags[flagType]['symbol'],color=flagStatus[level]['color'],
                             	    markersize=1,label='%s' % legendString,
                             	    )
                         else:
@@ -1311,13 +1311,13 @@ def plotProfilesScatter(
             fig, ax = setPlot()
             plotOverlay = False
             if plot_pre:
-                plt.scatter(scatterX_pre,scatterY_pre, s=1, c=scatterZ_pre,cmap='Greens')
+                plt.scatter(scatterX_pre,scatterY_pre, s=1, c=scatterZ_pre,cmap='Greens', rasterized=True)
                 timeString = np.datetime_as_string(scatterZ_pre[0],unit='D') + ' - ' + np.datetime_as_string(scatterZ_pre[-1],unit='D')
                 timeString = timeString.replace('T',' ') 
                 plt.text(.01, .99, timeString, size=4, color='#12541f', ha='left', va='top', transform=ax.transAxes)
                 preText = True
             if plot_post:
-                plt.scatter(scatterX_post,scatterY_post, s=1, c=scatterZ_post,cmap="Blues")
+                plt.scatter(scatterX_post,scatterY_post, s=1, c=scatterZ_post,cmap="Blues", rasterized=True)
                 timeString = np.datetime_as_string(scatterZ_post[0],unit='D') + ' - ' + np.datetime_as_string(scatterZ_post[-1],unit='D')
                 timeString = timeString.replace('T',' ') 
                 if preText:
@@ -1378,7 +1378,7 @@ def plotProfilesScatter(
                     scatterY_pre = np.concatenate( [ dataDict_pre[i]['scatterY'] for i in dataDict_pre.keys() if (i.week == spanIter) ] )
                     scatterZ_pre = np.concatenate( [ dataDict_pre[i]['scatterZ'] for i in dataDict_pre.keys() if (i.week == spanIter) ] )
                     if len(scatterX_pre) > 0:
-                        plt.scatter(scatterX_pre,scatterY_pre, s=1, c=scatterZ_pre,cmap='Greens')
+                        plt.scatter(scatterX_pre,scatterY_pre, s=1, c=scatterZ_pre,cmap='Greens', rasterized=True)
                         timeString = np.datetime_as_string(scatterZ_pre[0],unit='D')
                         plt.text(.01, .99, timeString, size=4, color='#12541f', ha='left', va='top', transform=ax.transAxes)
                         preText = True
@@ -1387,7 +1387,7 @@ def plotProfilesScatter(
                     scatterY_post = np.concatenate( [ dataDict_post[i]['scatterY'] for i in dataDict_post.keys() if (i.week == spanIter) ] )
                     scatterZ_post = np.concatenate( [ dataDict_post[i]['scatterZ'] for i in dataDict_post.keys() if (i.week == spanIter) ] )
                     if len(scatterX_post) > 0:
-                        plt.scatter(scatterX_post,scatterY_post, s=1, c=scatterZ_post,cmap='Blues')
+                        plt.scatter(scatterX_post,scatterY_post, s=1, c=scatterZ_post,cmap='Blues', rasterized=True)
                         timeString = np.datetime_as_string(scatterZ_post[0],unit='D')
                         if preText:
                             plt.text(.01, .90, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
@@ -1445,9 +1445,9 @@ def plotProfilesScatter(
                 plotOverlay = False
                 if plot_all:
                     if len(profiles) == 1:
-                        plt.plot(scatterX,scatterY,'.',color='#1f78b4',markersize=1)
+                        plt.plot(scatterX,scatterY,'.',color='#1f78b4',markersize=1, rasterized=True)
                     else:
-                        plt.scatter(scatterX,scatterY, s=1, c=scatterZ,cmap='Blues')
+                        plt.scatter(scatterX,scatterY, s=1, c=scatterZ,cmap='Blues', rasterized=True)
                     if 'day' in spanString:
                         timeString = np.datetime_as_string(scatterZ[0],unit='m') + ' - ' + np.datetime_as_string(scatterZ[-1],unit='m')
                     else:
@@ -1487,7 +1487,7 @@ def plotProfilesScatter(
                         profileIterator += 1
                         for key in sorted(dataDict.keys()):
                             fig, ax = setPlot()
-                            plt.plot(dataDict[key]['scatterX'],dataDict[key]['scatterY'],'.',color='#1f78b4',markersize=1)
+                            plt.plot(dataDict[key]['scatterX'],dataDict[key]['scatterY'],'.',color='#1f78b4',markersize=1, rasterized=True)
                             timeString = key.strftime("%Y-%m-%d %H:%M")
                             plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
                             fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
@@ -1520,7 +1520,7 @@ def plotProfilesScatter(
                             scatterY_sub = np.concatenate( [ dataDict[i]['scatterY'] for i in dataDict.keys() if ( (i.day == spanIter[2]) and (i.year == spanIter[0]) and (i.month == spanIter[1]) ) ] )
                             scatterZ_sub = np.concatenate( [ dataDict[i]['scatterZ'] for i in dataDict.keys() if ( (i.day == spanIter[2]) and (i.year == spanIter[0]) and (i.month == spanIter[1]) ) ] )
                             if len(scatterZ_sub) > 0:
-                                plt.scatter(scatterX_sub,scatterY_sub, s=1, c=scatterZ_sub,cmap='Blues')
+                                plt.scatter(scatterX_sub,scatterY_sub, s=1, c=scatterZ_sub,cmap='Blues', rasterized=True)
                                 timeString = np.datetime_as_string(scatterZ_sub[0],unit='D')
                                 plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
                                 fileName = fileName_base + '_' + str(profileIterator).zfill(3) + 'profile_' + spanString + '_' + 'none'
@@ -1553,7 +1553,7 @@ def plotProfilesScatter(
                             scatterY_sub = np.concatenate( [ dataDict[i]['scatterY'] for i in dataDict.keys() if ( (i.week == spanIter[1]) and (i.year == spanIter[0]) ) ] )
                             scatterZ_sub = np.concatenate( [ dataDict[i]['scatterZ'] for i in dataDict.keys() if ( (i.week == spanIter[1]) and (i.year == spanIter[0]) ) ] )
                             if len(scatterZ_sub) > 0:
-                                plt.scatter(scatterX_sub,scatterY_sub, s=1, c=scatterZ_sub,cmap='Blues')
+                                plt.scatter(scatterX_sub,scatterY_sub, s=1, c=scatterZ_sub,cmap='Blues', rasterized=True)
                                 timeString = np.datetime_as_string(scatterZ_sub[0],unit='D') + ' - ' + np.datetime_as_string(scatterZ_sub[-1],unit='D')
                                 timeString = timeString.replace('T',' ') 
                                 plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
@@ -1587,7 +1587,7 @@ def plotProfilesScatter(
                             scatterY_sub = np.concatenate( [ dataDict[i]['scatterY'] for i in dataDict.keys() if ( (i.month == spanIter[1]) and (i.year == spanIter[0]) ) ] )
                             scatterZ_sub = np.concatenate( [ dataDict[i]['scatterZ'] for i in dataDict.keys() if ( (i.month == spanIter[1]) and (i.year == spanIter[0]) ) ] )
                             if len(scatterZ_sub) > 0:
-                                plt.scatter(scatterX_sub,scatterY_sub, s=1, c=scatterZ_sub,cmap='Blues')
+                                plt.scatter(scatterX_sub,scatterY_sub, s=1, c=scatterZ_sub,cmap='Blues', rasterized=True)
                                 timeString = np.datetime_as_string(scatterZ_sub[0],unit='D') + ' - ' + np.datetime_as_string(scatterZ_sub[-1],unit='D')
                                 timeString = timeString.replace('T',' ') 
                                 plt.text(.01, .99, timeString, size=4, color='#1f78b4', ha='left', va='top', transform=ax.transAxes)
@@ -1858,9 +1858,12 @@ def plotScatter(
                         plt.savefig(f, format="svg",dpi=300)
                         fileName = fileName_base + '_' + spanString + '_' + 'anno_' + plotRange
                         saveAnnos_SVG(annoLines,f,fileName)
+                    else:
+                        fileName = fileName_base + '_' + spanString + '_' + 'anno_' + plotRange
+                        plt.savefig(fileName + '.png', dpi=300)
                 else:
                     fileName = fileName_base + '_' + spanString + '_' + 'anno_' + plotRange
-                    fig.savefig(fileName + '.png', dpi=300)
+                    plt.savefig(fileName + '.png', dpi=300)
 
 
         if 'time' in overlay:
