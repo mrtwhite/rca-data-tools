@@ -1139,7 +1139,8 @@ def plotProfilesScatter(
                     yLimits = plt.gca().get_ylim()
                     xLimits = plt.gca().get_xlim()
                     j = len(plotAnnotations)
-                    annoLineColors = ['#1f78b4','#a6cee3','#b2df8a','#33a02c','#ff7f00','#fdbf6f','#e31a1c','#fb9a99','#542c2c','#6e409c']
+                    annoLineColors = list(colors.cnames.values())[0:j]
+                    #annoLineColors = ['#1f78b4','#a6cee3','#b2df8a','#33a02c','#ff7f00','#fdbf6f','#e31a1c','#fb9a99','#542c2c','#6e409c']
                     for k in plotAnnotations.keys():
                         A = axHandle.axhline(yLimits[0]+3+(i*10),0.75,1,linewidth=3,color=annoLineColors[i],linestyle='-')
                         A.set_gid(f'anno_{i}')
