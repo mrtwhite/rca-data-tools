@@ -44,3 +44,16 @@ deployments:
       cpu: 8192
       memory: 49152
   schedule:
+- name: 2vcpu_16gb
+  version:
+  tags: []
+  description:
+  entrypoint: rca_data_tools/qaqc/flow.py:qaqc_pipeline_flow
+  parameters: {}
+  work_pool:
+    name: QAQC-default-workpool
+    work_queue_name:
+    job_variables:
+      cpu: 2048
+      memory: 16384
+  schedule:

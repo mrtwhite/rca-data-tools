@@ -195,7 +195,7 @@ class QAQCPipeline:
             # otherwise run the default deployment with default compute resources        
             else:
                 run_deployment(
-                    name="qaqc-pipeline-flow/4vcpu_30gb",
+                    name="qaqc-pipeline-flow/2vcpu_16gb",
                     parameters=parameters,
                     flow_run_name=run_name,
                     timeout=10 #TODO timeout might need to be increase if we have race condition errors
