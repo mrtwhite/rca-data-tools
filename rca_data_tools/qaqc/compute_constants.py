@@ -5,16 +5,35 @@ workpool.)
 
 """
 
-# TODO for now we want to save compute costs but this will
-# be uncommented in the future
-COMPUTE_EXCEPTIONS = {}
-#     'RS03AXPS-SF03A-3D-SPKIRA301':{
-#         '365': '8vcpu_48gb'
-#     },
-#     'RS01SBPS-SF01A-3D-SPKIRA101':{
-#         '365': '8vcpu_48gb',
-#         '30': '8vcpu_48gb',
-#         '7': '8vcpu_48gb',
-#         '1': '8vcpu_48gb',
-#     },
-# }
+COMPUTE_EXCEPTIONS = {
+    # spkira
+    'CE04OSPS-SF01B-3D-SPKIRA102':{
+        '365': '4vcpu_30gb',
+        '30': '4vcpu_30gb',
+        '7': '4vcpu_30gb',
+        '1': '8vcpu_30gb',
+    },
+    'RS01SBPS-SF01A-3D-SPKIRA101':{
+        '365': '4vcpu_30gb',
+        '30': '4vcpu_30gb',
+        '7': '4vcpu_30gb',
+        '1': '4vcpu_30gb',
+    },
+    'RS03AXPS-SF03A-3D-SPKIRA301':{
+        '365': '4vcpu_30gb',
+        '30': '4vcpu_30gb',
+        '7': '4vcpu_30gb',
+        '1': '4vcpu_30gb',
+    },
+    # velptd
+    'RS01SBPS-SF01A-4B-VELPTD102':{
+        '365': '4vcpu_30gb',
+    },
+    'RS03AXPS-SF03A-4B-VELPTD302':{
+        '365': '4vcpu_30gb',
+    },
+    # ctdbpo
+    'CE04OSBP-LJ01C-06-CTDBPO108':{
+        '365': '4vcpu_30gb',
+    }
+}
