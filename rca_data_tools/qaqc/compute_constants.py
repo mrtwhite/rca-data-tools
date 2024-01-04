@@ -11,7 +11,7 @@ COMPUTE_EXCEPTIONS = {
         '365': '4vcpu_30gb',
         '30': '4vcpu_30gb',
         '7': '4vcpu_30gb',
-        '1': '8vcpu_30gb',
+        '1': '4vcpu_30gb',
     },
     'RS01SBPS-SF01A-3D-SPKIRA101':{
         '365': '4vcpu_30gb',
